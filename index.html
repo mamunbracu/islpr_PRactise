@@ -1052,7 +1052,7 @@ function bestFor(id){const h=getHist().filter(x=>x.id===id);if(!h.length)return 
 /* ================= AI EXAMINER ================= */
 const PROVIDERS={
  claude:{name:"Claude (inside the Claude app)",short:"Claude",free:false},
- gemini:{name:"Google Gemini",short:"Gemini",free:true,prefix:"AIza",def:"auto"},
+ gemini:{name:"Google Gemini",short:"Gemini",free:true,prefix:"AQ.",prefixes:["AQ.","AIza"],def:"auto"},
  groq:{name:"Groq",short:"Groq",free:true,prefix:"gsk_",def:"openai/gpt-oss-120b"},
  openrouter:{name:"OpenRouter",short:"OpenRouter",free:true,prefix:"sk-or-",def:"auto"},
  anthropic:{name:"Claude API (Anthropic)",short:"Claude API",free:false,prefix:"sk-ant-",def:"claude-sonnet-5-5"},
@@ -1066,7 +1066,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function httpJSON(url,opts,signal){let res;try{res=await fetch(url,Object.assign({signal},opts))}catch(e){if(e&&e.name==="AbortError")throw{code:"cancelled"};throw{code:"network"}}
  let data=null;try{data=await res.json()}catch(e){}return {res,data}}
 function apiError(p,res,data){const err=(data&&data.error)||{};const msg=String(err.message||(typeof data?.error==="string"?data.error:"")||"");const st=String(err.status||"");const s=res.status;let code="api_error";
- if(s===401||/api key not valid|invalid api key|invalid x-api-key|API_KEY_INVALID|incorrect api key/i.test(msg))code="bad_key";
+ if(s===401||/api key not valid|invalid api key|invalid x-api-key|API_KEY_INVALID|incorrect api key|invalid authentication|UNAUTHENTICATED/i.test(msg+" "+st))code="bad_key";
  else if(s===429||st==="RESOURCE_EXHAUSTED"||/rate limit|quota/i.test(msg))code="rate_limited";
  else if(/location is not supported|not available in your country|region/i.test(msg))code="region";
  else if(/credit|balance|billing|payment required/i.test(msg)||s===402)code="no_credit";
@@ -1074,7 +1074,7 @@ function apiError(p,res,data){const err=(data&&data.error)||{};const msg=String(
  else if(s===404||/model.*(not found|does not exist|decommissioned|not supported)|NOT_FOUND/i.test(msg))code="bad_model";
  else if(s>=500||st==="UNAVAILABLE")code="upstream_error";
  const ra=+(res.headers&&res.headers.get&&res.headers.get("retry-after"))||0;return {code,message:msg,retryAfter:ra}}
-async function geminiModels(key,signal){const {res,data}=await httpJSON("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&key="+encodeURIComponent(key),{method:"GET"},signal);if(!res.ok)throw apiError("gemini",res,data);
+async function geminiModels(key,signal){const {res,data}=await httpJSON("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000",{method:"GET",headers:{"x-goog-api-key":key.trim()}},signal);if(!res.ok)throw apiError("gemini",res,data);
  return ((data&&data.models)||[]).filter(m=>(m.supportedGenerationMethods||[]).includes("generateContent")).map(m=>m.name.replace(/^models\//,"")).filter(n=>/^gem/i.test(n)&&!/(image|tts|audio|live|embed|vision|aqa|imagen|veo|robotics|computer)/i.test(n))}
 function pickGemini(names){const ver=n=>{const m=n.match(/(\d+(?:\.\d+)?)/);return m?parseFloat(m[1]):0};const by=re=>names.filter(n=>re.test(n)).sort((a,b)=>ver(b)-ver(a)||a.length-b.length);
  return by(/^gemini-[\d.]+-flash$/)[0]||by(/^gemini-flash-latest$/)[0]||by(/^gemini-[\d.]+-flash(?!-lite)/)[0]||by(/flash-lite/)[0]||by(/^gemini/)[0]||names[0]||null}
@@ -1096,7 +1096,7 @@ const AI={fn:null,state:"connecting",
  async callText(p,prompt,signal){const c=getCfg();
   if(p==="gemini"){let model=c.models.gemini;if(!model||model==="auto"){model=pickGemini(await geminiModels(c.keys.gemini,signal));if(!model)throw{code:"bad_model",message:"No Gemini text model is available on this key."};c.models.gemini=model;store.set("ai",c)}
    const body={contents:[{role:"user",parts:[{text:prompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:16384,responseMimeType:"application/json"}};
-   const {res,data}=await httpJSON(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(c.keys.gemini)}`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)},signal);
+   const {res,data}=await httpJSON(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{method:"POST",headers:{"content-type":"application/json","x-goog-api-key":c.keys.gemini.trim()},body:JSON.stringify(body)},signal);
    if(!res.ok){const e=apiError("gemini",res,data);if(e.code==="bad_model"&&c.models.gemini!=="auto"){const cc=getCfg();cc.models.gemini="auto";store.set("ai",cc)}throw e}
    const cand=(data&&data.candidates||[])[0];if(!cand){if(data&&data.promptFeedback&&data.promptFeedback.blockReason)throw{code:"refused"};throw{code:"empty_completion"}}
    const t=((cand.content&&cand.content.parts)||[]).filter(x=>!x.thought).map(x=>x.text||"").join("");if(!t.trim())throw{code:cand.finishReason==="SAFETY"?"refused":"empty_completion"};return t}
@@ -2232,15 +2232,15 @@ export default {
         const key = env.GEMINI_API_KEY;
         let model = env.GEMINI_MODEL;
         if (!model) {
-          const lr = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&key=" + key);
+          const lr = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000", { headers: { "x-goog-api-key": key } });
           const ld = await lr.json();
           const names = (ld.models || []).filter(m => (m.supportedGenerationMethods || []).includes("generateContent"))
             .map(m => m.name.replace("models/", "")).filter(n => /^gemini-[\d.]+-flash$/.test(n))
             .sort((a, b) => parseFloat(b.match(/[\d.]+/)) - parseFloat(a.match(/[\d.]+/)));
           model = names[0] || "gemini-flash-latest";
         }
-        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
-          method: "POST", headers: { "content-type": "application/json" },
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+          method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": key },
           body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 16384, responseMimeType: "application/json" } })
         });
         const d = await r.json();
@@ -2303,7 +2303,7 @@ async function testConnection(out,only){out.innerHTML=`<p class="note">Sending a
   const c=getCfg();out.innerHTML=`<div class="okmsg"><b>Connected.</b> ${esc(AI.label(p))} replied in ${((Date.now()-t0)/1000).toFixed(1)} s${c.models[p]?" using "+esc(c.models[p]):""}. AI marking is ready.</div>`;if(only)saveCfg({mode:prev});return true}
  catch(e){if(only)saveCfg({mode:prev});const code=e&&e.code||"upstream_error";out.innerHTML=`<div class="badmsg"><b>Not connected.</b> ${code==="unavailable"?"Add a key below first.":esc(ERRCOPY[code]||ERRCOPY.upstream_error)}${e&&e.message&&code!=="unavailable"?` <span class="note">(${esc(e.message)})</span>`:""}${code==="network"&&window.claude?' <span class="note">Inside the Claude app, pages can only reach Claude. Other providers work when the site is on your own web address (for example GitHub Pages).</span>':""}</div>`;return false}}
 const KEY_GUIDES={
- gemini:{price:"free",title:"Google Gemini",sub:"Free with a Google account. No credit card.",k:"rd",steps:["Open <b>aistudio.google.com</b> and sign in with your Google (Gmail) account.","Accept the terms if asked, then choose <b>Get API key</b> (left menu or top right).","Choose <b>Create API key</b>. If asked for a project, pick the default or create a new one.","Copy the key. It starts with <span class=\"mono\">AIza</span>. Paste it below and save."],
+ gemini:{price:"free",title:"Google Gemini",sub:"Free with a Google account. No credit card.",k:"rd",steps:["Open <b>aistudio.google.com</b> and sign in with your Google (Gmail) account.","Accept the terms if asked, then choose <b>Get API key</b> (left menu or top right).","Choose <b>Create API key</b>. If asked for a project, pick the default or create a new one.","Choose <b>Copy key</b>. New keys start with <span class=\"mono\">AQ.</span> (older keys start with <span class=\"mono\">AIza</span>); both work. Paste it below and save."],
   link:"https://aistudio.google.com/apikey",linkText:"Open Google AI Studio",notes:"Free daily and per-minute limits apply; you can see yours in AI Studio. On the free plan Google may use what you submit to improve its products, so don't type private details into your answers."},
  groq:{price:"free",title:"Groq",sub:"Free plan, very fast. No credit card.",k:"ls",steps:["Open <b>console.groq.com</b> and sign up (Google or email).","Open <b>API Keys</b> in the menu.","Choose <b>Create API Key</b>, give it a name like ISLPR, and create it.","Copy the key straight away (it is shown once). It starts with <span class=\"mono\">gsk_</span>. Paste it below and save."],
   link:"https://console.groq.com/keys",linkText:"Open Groq console",notes:"The free plan allows about 1,000 requests a day with a per-minute token limit, so mock tests may pause briefly between parts. The site waits and continues automatically."},
@@ -2314,7 +2314,7 @@ const KEY_GUIDES={
 function providerCardHTML(p,c,active){const g=KEY_GUIDES[p];const model=c.models[p]||"auto";
  return `<div class="card pad stack pcard k-${g.k}${active===p?" active":""}" data-p="${p}"><div class="row" style="justify-content:space-between"><h3>${esc(g.title)}</h3><span class="price ${g.price}">${g.price==="free"?"Free":"Paid"}</span></div><p class="note" style="margin-top:-6px">${esc(g.sub)}</p>
   <details class="guide k-${g.k}" ${c.keys[p]?"":"open"}><summary>How to get the key</summary><div class="gbody"><ol class="steps-list">${g.steps.map(s=>`<li><span>${s}</span></li>`).join("")}</ol><a href="${g.link}" target="_blank" rel="noopener">${esc(g.linkText)} ↗</a><p class="note">${esc(g.notes)}</p></div></details>
-  <div><label class="lbl" for="k-${p}">API key</label><div class="keyrow"><input type="password" id="k-${p}" autocomplete="off" spellcheck="false" placeholder="${PROVIDERS[p].prefix}…" value="${esc(c.keys[p]||"")}"><button class="btn sm kshow" type="button">Show</button></div></div>
+  <div><label class="lbl" for="k-${p}">API key</label><div class="keyrow"><input type="password" id="k-${p}" autocomplete="off" spellcheck="false" placeholder="${(PROVIDERS[p].prefixes||[PROVIDERS[p].prefix]).join("… or ")}…" value="${esc(c.keys[p]||"")}"><button class="btn sm kshow" type="button">Show</button></div></div>
   <div><label class="lbl" for="m-${p}">Model</label><div class="keyrow"><select id="m-${p}" style="flex:1 1 200px;min-width:0"><option value="${p==="groq"?PROVIDERS.groq.def:"auto"}">${p==="groq"?PROVIDERS.groq.def+" (recommended)":p==="anthropic"?"claude-sonnet-5-5 (recommended)":"Choose automatically (recommended)"}</option>${model!=="auto"&&model!==PROVIDERS[p].def?`<option value="${esc(model)}" selected>${esc(model)}</option>`:""}</select><button class="btn sm mload" type="button">Load list</button></div></div>
   <div class="row"><button class="btn primary ksave" type="button">Save and test</button>${c.keys[p]?`<button class="btn ghost kdel" type="button">Remove</button>`:""}</div><div class="kout"></div></div>`}
 VIEWS.connect=function(w){const c=getCfg();const active=AI.pick();const inClaude=!!window.claude;
@@ -2354,20 +2354,21 @@ VIEWS.connect=function(w){const c=getCfg();const active=AI.pick();const inClaude
    try{const list=await listModels(p);const sel=$("#m-"+p,card);const cur=getCfg().models[p]||sel.value;sel.innerHTML=`<option value="${p==="groq"?PROVIDERS.groq.def:"auto"}">${p==="groq"?PROVIDERS.groq.def+" (recommended)":"Choose automatically (recommended)"}</option>`+list.filter(m=>m!==PROVIDERS.groq.def||p!=="groq").map(m=>`<option value="${esc(m)}" ${m===cur?"selected":""}>${esc(m)}</option>`).join("");out.innerHTML=`<p class="note">${list.length} models available.</p>`}
    catch(err){out.innerHTML=`<div class="badmsg">${esc(ERRCOPY[err.code]||"Couldn't load the model list.")}</div>`}btn.disabled=false;btn.textContent="Load list"};
   $(".ksave",card).onclick=async()=>{const k=$("#k-"+p,card).value.trim();if(!k){toast("Paste your API key first.");return}
-   if(PROVIDERS[p].prefix&&!k.startsWith(PROVIDERS[p].prefix)){out.innerHTML=`<div class="badmsg">That doesn't look like a ${esc(KEY_GUIDES[p].title)} key. It should start with <span class="mono">${esc(PROVIDERS[p].prefix)}</span>.</div>`;return}
-   saveCfg({keys:{[p]:k},models:{[p]:$("#m-"+p,card).value}});const ok=await testConnection(out,p);if(ok&&getCfg().mode!=="auto"&&getCfg().mode!==p)saveCfg({mode:p});stat();if(ok)toast(KEY_GUIDES[p].title+" connected")};
+   const pre=PROVIDERS[p].prefixes||[PROVIDERS[p].prefix];if(/\s/.test(k)){out.innerHTML=`<div class="badmsg">The key contains a space or line break. Copy it again using the provider's <b>Copy key</b> button.</div>`;return}
+   const odd=pre[0]&&!pre.some(x=>k.startsWith(x));
+   saveCfg({keys:{[p]:k},models:{[p]:$("#m-"+p,card).value}});const ok=await testConnection(out,p);if(!ok&&odd)out.insertAdjacentHTML("beforeend",`<p class="note" style="margin-top:6px">${esc(KEY_GUIDES[p].title)} keys usually start with <span class="mono">${pre.map(esc).join("</span> or <span class=\"mono\">")}</span>. Check you copied the right key.</p>`);if(ok&&getCfg().mode!=="auto"&&getCfg().mode!==p)saveCfg({mode:p});stat();if(ok)toast(KEY_GUIDES[p].title+" connected")};
   const del=$(".kdel",card);if(del)del.onclick=()=>{const cc=getCfg();delete cc.keys[p];cc.models[p]="auto";store.set("ai",cc);AI.refresh();toast("Key removed");rerender()}});
  $("#psave",w).onclick=async()=>{const u=$("#purl",w).value.trim();if(!/^https:\/\//.test(u)){toast("Enter the full server address starting with https://");return}saveCfg({proxy:u,code:$("#pcode",w).value.trim()});await testConnection($("#pout",w),"proxy");stat()};
  const pd=$("#pdel",w);if(pd)pd.onclick=()=>{saveCfg({proxy:"",code:""});toast("Group server removed");rerender()}};
 
 /* quick connect shown in place of results, so typed answers are never lost */
-function setupInlineHTML(hasOffline){return `<div class="card pad stack k-ac"><h3>Connect free AI marking to see your result</h3><p>Your answer is saved. Paste a free <b>Google Gemini</b> key (from aistudio.google.com → Get API key) and it will be marked straight away.</p>
- <div class="keyrow"><label class="sr" for="ikey">Gemini API key</label><input type="password" id="ikey" autocomplete="off" spellcheck="false" placeholder="AIza…"><button class="btn primary k-ac" type="button" id="isave">${ic("spark",16)} Save and mark</button></div>
+function setupInlineHTML(hasOffline){return `<div class="card pad stack k-ac"><h3>Connect free AI marking to see your result</h3><p>Your answer is saved. Paste a free <b>Google Gemini</b> key (from aistudio.google.com → Get API key → Copy key) and it will be marked straight away.</p>
+ <div class="keyrow"><label class="sr" for="ikey">Gemini API key</label><input type="password" id="ikey" autocomplete="off" spellcheck="false" placeholder="AQ.… or AIza…"><button class="btn primary k-ac" type="button" id="isave">${ic("spark",16)} Save and mark</button></div>
  <p class="note">Prefer Groq, OpenRouter or Claude? <a href="#connect">See all options and step-by-step guides</a>.</p>
  ${hasOffline?'<div><button class="btn sm" type="button" id="ioff">Use the offline check instead</button></div>':""}</div>`}
 function bindSetupInline(box,retry,offlineFn){$("#isave",box).onclick=()=>{const k=$("#ikey",box).value.trim();
-  const p=k.startsWith("AIza")?"gemini":k.startsWith("gsk_")?"groq":k.startsWith("sk-or-")?"openrouter":k.startsWith("sk-ant-")?"anthropic":null;
-  if(!p){toast("That doesn't look like an API key. A Gemini key starts with AIza.");return}saveCfg({keys:{[p]:k}});retry()};
+  const p=(k.startsWith("AIza")||k.startsWith("AQ."))?"gemini":k.startsWith("gsk_")?"groq":k.startsWith("sk-or-")?"openrouter":k.startsWith("sk-ant-")?"anthropic":null;
+  if(!p){toast("That doesn't look like an API key. A Gemini key starts with AQ. or AIza.");return}saveCfg({keys:{[p]:k}});retry()};
  const o=$("#ioff",box);if(o&&offlineFn)o.onclick=offlineFn}
 </script>
 <script>
