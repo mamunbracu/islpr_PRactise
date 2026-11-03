@@ -1058,15 +1058,16 @@ const PROVIDERS={
  anthropic:{name:"Claude API (Anthropic)",short:"Claude API",free:false,prefix:"sk-ant-",def:"claude-sonnet-5-5"},
  proxy:{name:"Group server",short:"group server",free:null}
 };
-const AUTO_ORDER=["claude","gemini","groq","openrouter","anthropic","proxy"];
-function getCfg(){const raw=store.get("ai",{})||{};const c={mode:raw.mode||"auto",keys:Object.assign({},raw.keys||{}),models:Object.assign({},raw.models||{}),proxy:raw.proxy||"",code:raw.code||""};
+const AUTO_ORDER=["claude","gemini","openrouter","anthropic","proxy"];
+function getCfg(){const raw=store.get("ai",{})||{};const c={mode:raw.mode||"auto",keys:Object.assign({},raw.keys||{}),models:Object.assign({},raw.models||{}),proxy:raw.proxy||"",code:raw.code||"",gemWorks:raw.gemWorks||""};
  if(raw.key&&!c.keys.anthropic)c.keys.anthropic=raw.key;if(raw.model&&!c.models.anthropic)c.models.anthropic=raw.model;return c}
 function parseJSONLoose(t){t=String(t||"").trim();try{return JSON.parse(t)}catch(e){}const f=t.match(/```(?:json)?\s*([\s\S]*?)```/);if(f){try{return JSON.parse(f[1])}catch(e){}}const a=t.indexOf("{"),b=t.lastIndexOf("}");if(a>=0&&b>a){try{return JSON.parse(t.slice(a,b+1))}catch(e){}}throw{code:"invalid_json"}}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function httpJSON(url,opts,signal){let res;try{res=await fetch(url,Object.assign({signal},opts))}catch(e){if(e&&e.name==="AbortError")throw{code:"cancelled"};throw{code:"network"}}
  let data=null;try{data=await res.json()}catch(e){}return {res,data}}
 function apiError(p,res,data){const err=(data&&data.error)||{};const msg=String(err.message||(typeof data?.error==="string"?data.error:"")||"");const st=String(err.status||"");const s=res.status;let code="api_error";
- if(s===401||/api key not valid|invalid api key|invalid x-api-key|API_KEY_INVALID|incorrect api key|invalid authentication|UNAUTHENTICATED/i.test(msg+" "+st))code="bad_key";
+ if(/ACCESS_TOKEN_TYPE_UNSUPPORTED/i.test(msg+" "+JSON.stringify(data||{})))code="gemini_keytype";
+ else if(s===401||/api key not valid|invalid api key|invalid x-api-key|API_KEY_INVALID|incorrect api key|invalid authentication|UNAUTHENTICATED/i.test(msg+" "+st))code="bad_key";
  else if(s===429||st==="RESOURCE_EXHAUSTED"||/rate limit|quota/i.test(msg))code="rate_limited";
  else if(/location is not supported|not available in your country|region/i.test(msg))code="region";
  else if(/credit|balance|billing|payment required/i.test(msg)||s===402)code="no_credit";
@@ -1074,17 +1075,24 @@ function apiError(p,res,data){const err=(data&&data.error)||{};const msg=String(
  else if(s===404||/model.*(not found|does not exist|decommissioned|not supported)|NOT_FOUND/i.test(msg))code="bad_model";
  else if(s>=500||st==="UNAVAILABLE")code="upstream_error";
  const ra=+(res.headers&&res.headers.get&&res.headers.get("retry-after"))||0;return {code,message:msg,retryAfter:ra}}
-async function geminiModels(key,signal){const {res,data}=await httpJSON("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000",{method:"GET",headers:{"x-goog-api-key":key.trim()}},signal);if(!res.ok)throw apiError("gemini",res,data);
- return ((data&&data.models)||[]).filter(m=>(m.supportedGenerationMethods||[]).includes("generateContent")).map(m=>m.name.replace(/^models\//,"")).filter(n=>/^gem/i.test(n)&&!/(image|tts|audio|live|embed|vision|aqa|imagen|veo|robotics|computer)/i.test(n))}
-function pickGemini(names){const ver=n=>{const m=n.match(/(\d+(?:\.\d+)?)/);return m?parseFloat(m[1]):0};const by=re=>names.filter(n=>re.test(n)).sort((a,b)=>ver(b)-ver(a)||a.length-b.length);
- return by(/^gemini-[\d.]+-flash$/)[0]||by(/^gemini-flash-latest$/)[0]||by(/^gemini-[\d.]+-flash(?!-lite)/)[0]||by(/flash-lite/)[0]||by(/^gemini/)[0]||names[0]||null}
+const GBASE="https://generativelanguage.googleapis.com/v1beta/";
+async function gFetch(path,key,opts,signal){/* header first (works for new AQ. keys); fall back to ?key= */
+ let r=await httpJSON(GBASE+path,Object.assign({},opts,{headers:Object.assign({},opts.headers||{},{"x-goog-api-key":key})}),signal);
+ if(!r.res.ok&&[400,401,403].includes(r.res.status)){const m=JSON.stringify(r.data||{});if(/API_KEY|api key|UNAUTHENTICATED|ACCESS_TOKEN|credential|PERMISSION_DENIED/i.test(m)){const r2=await httpJSON(GBASE+path+(path.includes("?")?"&":"?")+"key="+encodeURIComponent(key),opts,signal);if(r2.res.ok)return r2;r.alt=r2}}
+ return r}
+async function geminiModels(key,signal){const {res,data}=await gFetch("models?pageSize=1000",key.trim(),{method:"GET"},signal);if(!res.ok)throw apiError("gemini",res,data);
+ return ((data&&data.models)||[]).filter(m=>(m.supportedGenerationMethods||[]).includes("generateContent")).map(m=>m.name.replace(/^models\//,"")).filter(n=>/^gem/i.test(n)&&!/(image|tts|audio|live|embed|vision|aqa|imagen|veo|robotics|computer|exp-|thinking-exp)/i.test(n))}
+function rankGemini(names){const ver=n=>{const m=n.match(/(\d+(?:\.\d+)?)/);return m?parseFloat(m[1]):0};const score=n=>/^gemini-[\d.]+-flash$/.test(n)?0:/^gemini-flash-latest$/.test(n)?1:/^gemini-[\d.]+-flash-lite$/.test(n)?2:/flash(?!.*preview)/.test(n)?3:/^gemini-[\d.]+-pro$/.test(n)?4:/^gemma/.test(n)?6:5;
+ return names.slice().sort((a,b)=>score(a)-score(b)||ver(b)-ver(a))}
+function pickGemini(names){return rankGemini(names)[0]||null}
+const GEMINI_FALLBACK=["gemini-flash-latest","gemini-3.8-flash","gemini-3.6-flash","gemini-3.5-flash-lite","gemini-flash-lite-latest","gemini-2.5-flash"];
 async function orModels(signal){const {res,data}=await httpJSON("https://openrouter.ai/api/v1/models",{method:"GET"},signal);if(!res.ok)throw apiError("openrouter",res,data);return ((data&&data.data)||[]).map(m=>m.id).filter(id=>/:free$/.test(id))}
 function pickOR(ids){const pref=[/gpt-oss-120b/,/deepseek.*(chat|v3)/,/llama-3\.3-70b/,/qwen.*(235|72|32)/,/gemma.*(27|31)/,/mistral/];for(const re of pref){const f=ids.find(i=>re.test(i));if(f)return f}return ids[0]||null}
 async function groqModels(key,signal){const {res,data}=await httpJSON("https://api.groq.com/openai/v1/models",{method:"GET",headers:{Authorization:"Bearer "+key}},signal);if(!res.ok)throw apiError("groq",res,data);return ((data&&data.data)||[]).map(m=>m.id).filter(id=>!/(whisper|tts|guard|playai|orpheus|prompt-guard|distil)/i.test(id))}
 async function listModels(p,signal){const c=getCfg();if(p==="gemini")return geminiModels(c.keys.gemini,signal);if(p==="groq")return groqModels(c.keys.groq,signal);if(p==="openrouter")return orModels(signal);if(p==="anthropic")return ["claude-sonnet-5-5","claude-haiku-5-5","claude-opus-5-5"];return []}
 const AI={fn:null,state:"connecting",
  async init(){try{if(window.claude&&typeof claude.use==="function")this.fn=await claude.use("sample")}catch(e){this.fn=null}this.refresh()},
- usable(p,c){c=c||getCfg();if(p==="claude")return !!this.fn;if(p==="proxy")return !!c.proxy;return !!c.keys[p]},
+ usable(p,c){c=c||getCfg();if(p==="groq")return false;if(p==="claude")return !!this.fn;if(p==="proxy")return !!c.proxy;return !!c.keys[p]},
  pick(){const c=getCfg();if(c.mode!=="auto")return this.usable(c.mode,c)?c.mode:null;return AUTO_ORDER.find(p=>this.usable(p,c))||null},
  label(p){return p?PROVIDERS[p].name:"not connected"},
  refresh(){const p=this.pick();this.state=p?"on":"off";const el=$("#aiChip");if(!el)return;el.className="ai-chip "+(p?"on":"off");el.querySelector("span").textContent=p?"AI: "+PROVIDERS[p].short:"Set up AI marking";el.title=p?"AI marking connected via "+this.label(p):"AI marking is not connected. Tap to set it up."},
@@ -1094,12 +1102,18 @@ const AI={fn:null,state:"connecting",
   const full=prompt+"\n\nReply with only the JSON object, no other text.";
   const text=await this.callText(p,full,signal);return parseJSONLoose(text)},
  async callText(p,prompt,signal){const c=getCfg();
-  if(p==="gemini"){let model=c.models.gemini;if(!model||model==="auto"){model=pickGemini(await geminiModels(c.keys.gemini,signal));if(!model)throw{code:"bad_model",message:"No Gemini text model is available on this key."};c.models.gemini=model;store.set("ai",c)}
-   const body={contents:[{role:"user",parts:[{text:prompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:16384,responseMimeType:"application/json"}};
-   const {res,data}=await httpJSON(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{method:"POST",headers:{"content-type":"application/json","x-goog-api-key":c.keys.gemini.trim()},body:JSON.stringify(body)},signal);
-   if(!res.ok){const e=apiError("gemini",res,data);if(e.code==="bad_model"&&c.models.gemini!=="auto"){const cc=getCfg();cc.models.gemini="auto";store.set("ai",cc)}throw e}
-   const cand=(data&&data.candidates||[])[0];if(!cand){if(data&&data.promptFeedback&&data.promptFeedback.blockReason)throw{code:"refused"};throw{code:"empty_completion"}}
-   const t=((cand.content&&cand.content.parts)||[]).filter(x=>!x.thought).map(x=>x.text||"").join("");if(!t.trim())throw{code:cand.finishReason==="SAFETY"?"refused":"empty_completion"};return t}
+  if(p==="gemini"){const key=c.keys.gemini.trim();let pinned=c.models.gemini&&c.models.gemini!=="auto"?c.models.gemini:null;let cands;
+   if(pinned)cands=[pinned];else{try{cands=rankGemini(await geminiModels(key,signal)).slice(0,5)}catch(e){if(e.code==="cancelled"||e.code==="network"||e.code==="rate_limited")throw e;cands=[]}if(c.gemWorks&&!cands.includes(c.gemWorks))cands.unshift(c.gemWorks);else if(c.gemWorks)cands=[c.gemWorks,...cands.filter(x=>x!==c.gemWorks)];GEMINI_FALLBACK.forEach(m=>{if(!cands.includes(m))cands.push(m)})}
+   let lastErr=null;
+   for(const model of cands.slice(0,7)){for(const json of [true,false]){const gc={temperature:0.4};if(json)gc.responseMimeType="application/json";
+     const {res,data}=await gFetch(`models/${encodeURIComponent(model)}:generateContent`,key,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({contents:[{role:"user",parts:[{text:prompt}]}],generationConfig:gc})},signal);
+     if(res.ok){const cand=(data&&data.candidates||[])[0];if(!cand){if(data&&data.promptFeedback&&data.promptFeedback.blockReason)throw{code:"refused"};lastErr={code:"empty_completion"};break}
+      const t=((cand.content&&cand.content.parts)||[]).filter(x=>!x.thought).map(x=>x.text||"").join("");if(!t.trim()){lastErr={code:cand.finishReason==="SAFETY"?"refused":"empty_completion"};break}
+      if(!pinned&&c.gemWorks!==model){const cc=getCfg();cc.gemWorks=model;store.set("ai",cc)}return t}
+     const e=apiError("gemini",res,data);e.model=model;lastErr=e;
+     if(["bad_key","rate_limited","region","no_credit"].includes(e.code)||res.status===401)throw e;
+     if(json&&res.status===400&&!/model/i.test(e.message))continue;break}}
+   throw lastErr||{code:"bad_model",message:"No Gemini model accepted the request."}}
   if(p==="groq"||p==="openrouter"){const url=p==="groq"?"https://api.groq.com/openai/v1/chat/completions":"https://openrouter.ai/api/v1/chat/completions";
    let model=c.models[p];if(!model||model==="auto"){if(p==="openrouter"){model=pickOR(await orModels(signal));if(!model)throw{code:"bad_model",message:"No free OpenRouter model is listed right now."}}else model=PROVIDERS.groq.def;c.models[p]=model;store.set("ai",c)}
    const headers={"content-type":"application/json",Authorization:"Bearer "+c.keys[p]};if(p==="openrouter"){headers["X-Title"]="ISLPR Prep Studio"}
@@ -1116,9 +1130,9 @@ const AI={fn:null,state:"connecting",
   throw{code:"unavailable"}}
 };
 AI.ready=AI.init();
-const NEEDS_SETUP=["unavailable","bad_key","bad_code","no_credit","forbidden","bad_model","region"];
+const NEEDS_SETUP=["unavailable","bad_key","bad_code","no_credit","forbidden","bad_model","region","gemini_keytype"];
 const FATAL=["unavailable","not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed"];
-const ERRCOPY={rate_limited:"The AI service's usage limit was reached. Free plans allow a set number of requests per minute and per day: wait a minute and try again, or switch to another provider in AI setup.",region:"This AI service isn't available in your region. Choose another provider in AI setup.",session_expired:"Your session has expired. Sign in to Claude again, then retry.",refused:"The examiner couldn't assess this response. Try rewording it.",empty_completion:"The examiner returned nothing. Try again with a slightly longer answer.",invalid_json:"The examiner's reply came back garbled. Try again.",prompt_too_large:"That answer is too long to mark in one go. Shorten it and retry.",upstream_error:"The connection dropped while marking. Your answer is safe; try again.",network:"Couldn't reach the AI server. Check your internet connection and try again.",bad_key:"The API key was rejected. Check that you copied the whole key, with no spaces, in AI setup.",bad_code:"The group server rejected the passcode. Check it with the person who set up the server.",no_credit:"This account has no credit left. Add credit with the provider, or switch to a free provider (Gemini or Groq) in AI setup.",forbidden:"The API key doesn't have permission for this request. Create a new key in the Anthropic Console.",bad_model:"The selected AI model isn't available on this account. Choose another model in AI setup.",api_error:"The AI service returned an error."};
+const ERRCOPY={rate_limited:"The AI service's usage limit was reached. Free plans allow a set number of requests per minute and per day: wait a minute and try again, or switch to another provider in AI setup.",region:"This AI service isn't available in your region. Choose another provider in AI setup.",session_expired:"Your session has expired. Sign in to Claude again, then retry.",refused:"The examiner couldn't assess this response. Try rewording it.",empty_completion:"The examiner returned nothing. Try again with a slightly longer answer.",invalid_json:"The examiner's reply came back garbled. Try again.",prompt_too_large:"That answer is too long to mark in one go. Shorten it and retry.",upstream_error:"The connection dropped while marking. Your answer is safe; try again.",network:"Your browser couldn't reach the AI service. If you're on a work, school or library network, it may block AI websites: try again at home or on your phone using mobile data. Also turn off ad-blockers or VPNs for this site.",gemini_keytype:"Google rejected this new-style (AQ.) key with ACCESS_TOKEN_TYPE_UNSUPPORTED. This is a known Google problem with some new keys. Fix: in AI Studio choose Create API key → Create API key in new project, copy the new key and paste it here. If it still fails, use OpenRouter (free) instead.",bad_key:"The API key was rejected. Check that you copied the whole key, with no spaces, in AI setup.",bad_code:"The group server rejected the passcode. Check it with the person who set up the server.",no_credit:"This account has no credit left. Add credit with the provider, or switch to a free provider (Gemini or Groq) in AI setup.",forbidden:"The API key doesn't have permission for this request. Create a new key in the Anthropic Console.",bad_model:"The selected AI model isn't available on this account. Choose another model in AI setup.",api_error:"The AI service returned an error."};
 const THINK_MSGS=["Reading your response carefully…","Checking grammar and vocabulary…","Comparing with ISLPR level descriptors…","Finding errors to highlight…","Writing tips and a model answer…","Almost done…"];
 
 /* generic marking runner: shows animated examiner, falls back offline */
@@ -1133,7 +1147,7 @@ async function mark(box,{prompt,render,offline,onCancel,msgs}){
   if(code==="cancelled"){box.innerHTML="";onCancel&&onCancel();return null}
   if(FATAL.includes(code)&&code!=="unavailable")AI.set("off");
   if(code==="unavailable"||(FATAL.includes(code)&&!AI.pick())){box.innerHTML=setupInlineHTML(!!offline);bindSetupInline(box,()=>mark(box,{prompt,render,offline,onCancel,msgs}),offline?()=>{const r=offline();r.offline=true;render(r)}:null);return null}
-  box.innerHTML=`<div class="card pad stack"><div class="callout k-sp"><b>Marking didn't finish.</b> ${esc(ERRCOPY[code]||ERRCOPY.upstream_error)}${code==="api_error"&&e.message?" ("+esc(e.message)+")":""}${NEEDS_SETUP.includes(code)?' <a href="#connect">Open AI setup</a>.':""}</div><div class="row"><button class="btn primary" type="button" id="retry">Try again</button>${offline?'<button class="btn" type="button" id="offl">Use offline check instead</button>':""}</div></div>`;
+  box.innerHTML=`<div class="card pad stack"><div class="callout k-sp"><b>Marking didn't finish.</b> ${esc(ERRCOPY[code]||ERRCOPY.upstream_error)}${e.message?`<br><span class="note">Message from the AI service${e.model?" ("+esc(e.model)+")":""}: ${esc(e.message)}</span>`:""}${NEEDS_SETUP.includes(code)?' <a href="#connect">Open AI setup</a>.':""}</div><div class="row"><button class="btn primary" type="button" id="retry">Try again</button>${offline?'<button class="btn" type="button" id="offl">Use offline check instead</button>':""}</div></div>`;
   $("#retry",box).onclick=()=>mark(box,{prompt,render,offline,onCancel,msgs});
   if(offline)$("#offl",box).onclick=()=>{const r=offline();r.offline=true;render(r)};
   return null}
@@ -2300,8 +2314,8 @@ function copyText(text,btn){const done=()=>{const o=btn.innerHTML;btn.textConten
  function fallback(){const t=document.createElement("textarea");t.value=text;document.body.append(t);t.select();try{document.execCommand("copy");done()}catch(e){toast("Select the text and copy it manually.")}t.remove()}}
 async function testConnection(out,only){out.innerHTML=`<p class="note">Sending a test request…</p>`;const t0=Date.now();const prev=getCfg().mode;
  try{await AI.ready;if(only)saveCfg({mode:only});const p=AI.pick();if(!p)throw{code:"unavailable"};const r=await AI.json('This is a connection test. Reply with only this JSON: {"ok":true}');
-  const c=getCfg();out.innerHTML=`<div class="okmsg"><b>Connected.</b> ${esc(AI.label(p))} replied in ${((Date.now()-t0)/1000).toFixed(1)} s${c.models[p]?" using "+esc(c.models[p]):""}. AI marking is ready.</div>`;if(only)saveCfg({mode:prev});return true}
- catch(e){if(only)saveCfg({mode:prev});const code=e&&e.code||"upstream_error";out.innerHTML=`<div class="badmsg"><b>Not connected.</b> ${code==="unavailable"?"Add a key below first.":esc(ERRCOPY[code]||ERRCOPY.upstream_error)}${e&&e.message&&code!=="unavailable"?` <span class="note">(${esc(e.message)})</span>`:""}${code==="network"&&window.claude?' <span class="note">Inside the Claude app, pages can only reach Claude. Other providers work when the site is on your own web address (for example GitHub Pages).</span>':""}</div>`;return false}}
+  const c=getCfg();out.innerHTML=`<div class="okmsg"><b>Connected.</b> ${esc(AI.label(p))} replied in ${((Date.now()-t0)/1000).toFixed(1)} s${(()=>{const m=p==="gemini"&&(!c.models.gemini||c.models.gemini==="auto")?c.gemWorks:c.models[p];return m&&m!=="auto"?" using "+esc(m):""})()}. AI marking is ready.</div>`;if(only)saveCfg({mode:prev});return true}
+ catch(e){if(only)saveCfg({mode:prev});const code=e&&e.code||"upstream_error";out.innerHTML=`<div class="badmsg"><b>Not connected.</b> ${code==="unavailable"?"Add a key below first.":esc(ERRCOPY[code]||ERRCOPY.upstream_error)}${e&&e.message&&code!=="unavailable"?`<br><span class="note">Message from the service${e.model?" ("+esc(e.model)+")":""}: ${esc(e.message)}</span>`:""}<br><span class="note mono">Error code: ${esc(code)}</span>${code==="network"&&window.claude?' <span class="note">Inside the Claude app, pages can only reach Claude. Other providers work when the site is on your own web address (for example GitHub Pages).</span>':""}</div>`;return false}}
 const KEY_GUIDES={
  gemini:{price:"free",title:"Google Gemini",sub:"Free with a Google account. No credit card.",k:"rd",steps:["Open <b>aistudio.google.com</b> and sign in with your Google (Gmail) account.","Accept the terms if asked, then choose <b>Get API key</b> (left menu or top right).","Choose <b>Create API key</b>. If asked for a project, pick the default or create a new one.","Choose <b>Copy key</b>. New keys start with <span class=\"mono\">AQ.</span> (older keys start with <span class=\"mono\">AIza</span>); both work. Paste it below and save."],
   link:"https://aistudio.google.com/apikey",linkText:"Open Google AI Studio",notes:"Free daily and per-minute limits apply; you can see yours in AI Studio. On the free plan Google may use what you submit to improve its products, so don't type private details into your answers."},
@@ -2319,16 +2333,16 @@ function providerCardHTML(p,c,active){const g=KEY_GUIDES[p];const model=c.models
   <div class="row"><button class="btn primary ksave" type="button">Save and test</button>${c.keys[p]?`<button class="btn ghost kdel" type="button">Remove</button>`:""}</div><div class="kout"></div></div>`}
 VIEWS.connect=function(w){const c=getCfg();const active=AI.pick();const inClaude=!!window.claude;
  w.innerHTML=`<div class="phead k-ac" style="margin-bottom:18px"><div><div class="k-bar"></div><h1>AI marking setup</h1><p>Connect an AI service once on each device. Every answer is then marked live with a level, highlighted errors, tips and model answers. Google Gemini and Groq are free.</p></div></div>
- <div class="card pad stack" style="margin-bottom:18px"><div class="row" style="justify-content:space-between"><div><span class="eyebrow">Status on this device</span><h3 id="cstat"></h3></div><div class="row"><label class="sr" for="amode">Which service to use</label><select id="amode"><option value="auto">Use the first available</option>${["claude","gemini","groq","openrouter","anthropic","proxy"].map(p=>`<option value="${p}" ${c.mode===p?"selected":""}>Always use ${esc(PROVIDERS[p].name)}</option>`).join("")}</select><button class="btn primary k-ac" type="button" id="ctest">Test connection</button></div></div><div id="ctres"></div>
+ <div class="card pad stack" style="margin-bottom:18px"><div class="row" style="justify-content:space-between"><div><span class="eyebrow">Status on this device</span><h3 id="cstat"></h3></div><div class="row"><label class="sr" for="amode">Which service to use</label><select id="amode"><option value="auto">Use the first available</option>${["claude","gemini","openrouter","anthropic","proxy"].map(p=>`<option value="${p}" ${c.mode===p?"selected":""}>Always use ${esc(PROVIDERS[p].name)}</option>`).join("")}</select><button class="btn primary k-ac" type="button" id="ctest">Test connection</button></div></div><div id="ctres"></div>
   ${inClaude?`<div class="callout k-ac"><b>You're inside the Claude app.</b> Here the site marks with Claude, using your Claude plan's normal usage allowance (no API key needed). On your own website, such as GitHub Pages, use a free Gemini or Groq key below.</div>`:""}</div>
  <div class="card pad stack" style="margin-bottom:18px"><h3>Which option should I choose?</h3><div class="tscroll"><table class="ltable cmp-table"><thead><tr><th>Service</th><th>Cost</th><th>Daily use</th><th>Quality of marking</th></tr></thead><tbody>
   <tr><td class="first">Google Gemini</td><td>Free</td><td>Plenty for daily practice</td><td>Very good · recommended</td></tr>
-  <tr><td class="first">Groq</td><td>Free</td><td>About 1,000 requests a day</td><td>Good, very fast</td></tr>
+  <tr><td class="first">Groq</td><td>Free</td><td>About 1,000 requests a day</td><td>Good · only through a group server (Groq blocks direct website use)</td></tr>
   <tr><td class="first">OpenRouter (free models)</td><td>Free</td><td>About 50 a day</td><td>Varies by model</td></tr>
   <tr><td class="first">Claude API</td><td>Paid per answer</td><td>Unlimited (your credit)</td><td>Excellent</td></tr>
   <tr><td class="first">Claude app</td><td>Your Claude plan</td><td>Your plan's limits</td><td>Excellent · only when opened inside Claude</td></tr></tbody></table></div>
   <p class="note">Each friend can create their own free Gemini key in about two minutes. Or one person can run a group server (below) and share a passcode.</p></div>
- <div class="pcards">${["gemini","groq","openrouter","anthropic"].map(p=>providerCardHTML(p,c,active)).join("")}</div>
+ <div class="pcards">${["gemini","openrouter","anthropic"].map(p=>providerCardHTML(p,c,active)).join("")}</div>
  <div class="card pad stack k-ac" style="margin-top:18px"><div class="row" style="justify-content:space-between"><h3>Group server (one key for your group)</h3><span class="price free">Free to host</span></div>
   <p>One person puts a key (a free Gemini key works) on a free Cloudflare Worker. Friends enter the server address and a passcode, and never see the key.</p>
   <div class="grid g2"><div><label class="lbl" for="purl">Server address</label><input type="url" id="purl" autocomplete="off" spellcheck="false" placeholder="https://islpr-ai.yourname.workers.dev" value="${esc(c.proxy)}"></div><div><label class="lbl" for="pcode">Passcode</label><input type="password" id="pcode" autocomplete="off" value="${esc(c.code)}"></div></div>
@@ -2367,7 +2381,8 @@ function setupInlineHTML(hasOffline){return `<div class="card pad stack k-ac"><h
  <p class="note">Prefer Groq, OpenRouter or Claude? <a href="#connect">See all options and step-by-step guides</a>.</p>
  ${hasOffline?'<div><button class="btn sm" type="button" id="ioff">Use the offline check instead</button></div>':""}</div>`}
 function bindSetupInline(box,retry,offlineFn){$("#isave",box).onclick=()=>{const k=$("#ikey",box).value.trim();
-  const p=(k.startsWith("AIza")||k.startsWith("AQ."))?"gemini":k.startsWith("gsk_")?"groq":k.startsWith("sk-or-")?"openrouter":k.startsWith("sk-ant-")?"anthropic":null;
+  if(k.startsWith("gsk_")){toast("Groq keys can't be used directly from a website. Use a free Gemini or OpenRouter key, or put the Groq key on a group server.");return}
+  const p=(k.startsWith("AIza")||k.startsWith("AQ."))?"gemini":k.startsWith("sk-or-")?"openrouter":k.startsWith("sk-ant-")?"anthropic":null;
   if(!p){toast("That doesn't look like an API key. A Gemini key starts with AQ. or AIza.");return}saveCfg({keys:{[p]:k}});retry()};
  const o=$("#ioff",box);if(o&&offlineFn)o.onclick=offlineFn}
 </script>
