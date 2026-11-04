@@ -24,7 +24,7 @@ jobs:
             p.on('pageerror', e => log('PAGE ERROR ' + e));
             await p.goto('https://mamunbracu.github.io/islpr_PRactise/#writing'); await p.waitForTimeout(1500);
             log('AI chip: ' + (await p.locator('#aiChip').innerText()));
-            await p.locator('.item').first.click();
+            await p.locator('.item').first().click();
             await p.fill('#essay', 'Dear Property Manager,\n\nI am writing about the heater in my flat which has not work for two weeks. It is very cold at night and my childrens has been sick. I called the agent three times but nobody reply me.\n\nI would like the heater to be repaired by this Friday. Please contact me as soon as possible.\n\nYours sincerely,\nSam');
             await p.click('#sub');
             await p.waitForSelector('.result-head, #retry', { timeout: 240000 });
@@ -32,7 +32,7 @@ jobs:
             log('RESULT:\n' + res.slice(0, 900));
             log('highlighted errors: ' + await p.locator('.marked mark.err').count());
             await p.goto('https://mamunbracu.github.io/islpr_PRactise/#speaking'); await p.waitForTimeout(800);
-            await p.locator('.item').first.click(); await p.click('#startiv');
+            await p.locator('.item').first().click(); await p.click('#startiv');
             const ans = ['I am Sam, I come from Bangladesh and I am study teaching in Sydney.','I grow up in Dhaka, it is very busy city with many people.','Because I want better future and good education.','I usually work and sometime go to the beach with friends.','I am looking forward to finish my degree next year.'];
             for (const a of ans) { await p.fill('#sa', a); await p.click('#nq'); await p.waitForTimeout(150); }
             await p.waitForSelector('#sres .result-head, #sres #retry', { timeout: 240000 });
