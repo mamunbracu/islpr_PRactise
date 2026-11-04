@@ -1051,6 +1051,7 @@ function bestFor(id){const h=getHist().filter(x=>x.id===id);if(!h.length)return 
 
 /* ================= AI EXAMINER ================= */
 const PROVIDERS={
+ free:{name:"Free built-in AI",short:"Free ✓",free:true},
  claude:{name:"Claude (inside the Claude app)",short:"Claude",free:false},
  gemini:{name:"Google Gemini",short:"Gemini",free:true,prefix:"AQ.",prefixes:["AQ.","AIza"],def:"auto"},
  groq:{name:"Groq",short:"Groq",free:true,prefix:"gsk_",def:"openai/gpt-oss-120b"},
@@ -1062,10 +1063,14 @@ const PROVIDERS={
    Put your Cloudflare Worker address here and every visitor is marked automatically, with nothing to set up.
    Never put an API key here: this file is public. The key lives only on the Worker. */
 const SITE_CONFIG={server:"",passcode:""};
-const AUTO_ORDER=["claude","gemini","openrouter","anthropic","proxy"];
-function getCfg(){const raw=store.get("ai",{})||{};const c={mode:raw.mode||"auto",keys:Object.assign({},raw.keys||{}),models:Object.assign({},raw.models||{}),proxy:raw.proxy||SITE_CONFIG.server||"",code:raw.proxy?(raw.code||""):(SITE_CONFIG.passcode||""),builtIn:!raw.proxy&&!!SITE_CONFIG.server,gemWorks:raw.gemWorks||""};
+const AUTO_ORDER=["claude","free","gemini"];
+const FREE_URL="https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions";
+const FREE_MODELS=["Mistral-Small-3.2-24B-Instruct-2506","Meta-Llama-3_3-70B-Instruct","gpt-oss-120b"];
+function getCfg(){const raw=store.get("ai",{})||{};const c={freeWorks:raw.freeWorks||"",mode:raw.mode||"auto",keys:Object.assign({},raw.keys||{}),models:Object.assign({},raw.models||{}),proxy:raw.proxy||SITE_CONFIG.server||"",code:raw.proxy?(raw.code||""):(SITE_CONFIG.passcode||""),builtIn:!raw.proxy&&!!SITE_CONFIG.server,gemWorks:raw.gemWorks||""};
  if(raw.key&&!c.keys.anthropic)c.keys.anthropic=raw.key;if(raw.model&&!c.models.anthropic)c.models.anthropic=raw.model;return c}
-function parseJSONLoose(t){t=String(t||"").trim();try{return JSON.parse(t)}catch(e){}const f=t.match(/```(?:json)?\s*([\s\S]*?)```/);if(f){try{return JSON.parse(f[1])}catch(e){}}const a=t.indexOf("{"),b=t.lastIndexOf("}");if(a>=0&&b>a){try{return JSON.parse(t.slice(a,b+1))}catch(e){}}throw{code:"invalid_json"}}
+function repairJSON(t){let out="",inStr=false,esc=false;for(const ch of t){if(inStr){if(esc){esc=false;out+=ch;continue}if(ch==="\\"){esc=true;out+=ch;continue}if(ch==='"'){inStr=false;out+=ch;continue}if(ch==="\n"){out+="\\n";continue}if(ch==="\r")continue;if(ch==="\t"){out+="\\t";continue}out+=ch}else{if(ch==='"')inStr=true;out+=ch}}return out.replace(/,\s*([}\]])/g,"$1")}
+function parseJSONLoose(t){t=String(t||"").trim().replace(/<think>[\s\S]*?<\/think>/g,"").trim();try{return JSON.parse(t)}catch(e){}
+ {const a=t.indexOf("{"),b=t.lastIndexOf("}");if(a>=0&&b>a){try{return JSON.parse(repairJSON(t.slice(a,b+1)))}catch(e){}}}const f=t.match(/```(?:json)?\s*([\s\S]*?)```/);if(f){try{return JSON.parse(f[1])}catch(e){}}const a=t.indexOf("{"),b=t.lastIndexOf("}");if(a>=0&&b>a){try{return JSON.parse(t.slice(a,b+1))}catch(e){}}throw{code:"invalid_json"}}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function httpJSON(url,opts,signal){let res;try{res=await fetch(url,Object.assign({signal},opts))}catch(e){if(e&&e.name==="AbortError")throw{code:"cancelled"};throw{code:"network"}}
  let data=null;try{data=await res.json()}catch(e){}return {res,data}}
@@ -1096,7 +1101,7 @@ async function groqModels(key,signal){const {res,data}=await httpJSON("https://a
 async function listModels(p,signal){const c=getCfg();if(p==="gemini")return geminiModels(c.keys.gemini,signal);if(p==="groq")return groqModels(c.keys.groq,signal);if(p==="openrouter")return orModels(signal);if(p==="anthropic")return ["claude-sonnet-5-5","claude-haiku-5-5","claude-opus-5-5"];return []}
 const AI={fn:null,state:"connecting",
  async init(){try{if(window.claude&&typeof claude.use==="function")this.fn=await claude.use("sample")}catch(e){this.fn=null}this.refresh()},
- usable(p,c){c=c||getCfg();if(p==="groq")return false;if(p==="claude")return !!this.fn;if(p==="proxy")return !!c.proxy;return !!c.keys[p]},
+ usable(p,c){c=c||getCfg();if(p==="free")return !window.claude;if(p==="groq"||p==="anthropic"||p==="openrouter")return false;if(p==="claude")return !!this.fn;if(p==="proxy")return !!c.proxy;return !!c.keys[p]},
  pick(){const c=getCfg();if(c.mode!=="auto")return this.usable(c.mode,c)?c.mode:null;const order=c.builtIn?["claude","proxy",...AUTO_ORDER.filter(x=>x!=="claude"&&x!=="proxy")]:AUTO_ORDER;return order.find(p=>this.usable(p,c))||null},
  label(p){if(p==="proxy"&&getCfg().builtIn)return "the site's built-in Claude marking";return p?PROVIDERS[p].name:"not connected"},
  refresh(){const p=this.pick();this.state=p?"on":"off";const el=$("#aiChip");if(!el)return;el.className="ai-chip "+(p?"on":"off");el.querySelector("span").textContent=p?"AI: "+(p==="proxy"&&getCfg().builtIn?"Claude ✓":PROVIDERS[p].short):"Set up AI marking";el.title=p?"AI marking connected via "+this.label(p):"AI marking is not connected. Tap to set it up."},
@@ -1104,7 +1109,19 @@ const AI={fn:null,state:"connecting",
  async json(prompt,signal){await this.ready;const p=this.pick();if(!p)throw{code:"unavailable"};
   if(p==="claude")return this.fn.json(prompt,{signal,modelTier:"default"});
   const full=prompt+"\n\nReply with only the JSON object, no other text.";
+  if(p==="free"){try{return await this.freeJSON(full,signal)}catch(e){if(e&&e.code==="cancelled")throw e;const c=getCfg();if(c.keys.gemini){try{return parseJSONLoose(await this.callText("gemini",full,signal))}catch(e2){if(e2&&e2.code==="cancelled")throw e2}}throw e}}
   const text=await this.callText(p,full,signal);return parseJSONLoose(text)},
+ async freeJSON(prompt,signal){const c=getCfg();const order=FREE_MODELS.slice();if(c.freeWorks&&order.includes(c.freeWorks)){order.splice(order.indexOf(c.freeWorks),1);order.unshift(c.freeWorks)}
+  let waits=[],lastErr=null;
+  for(let round=0;round<2;round++){
+   for(const model of order){const {res,data}=await httpJSON(FREE_URL,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({model,messages:[{role:"user",content:prompt}],temperature:0.3,max_tokens:7000})},signal);
+    if(res.status===429){waits.push(+(res.headers.get("retry-after"))||30);lastErr={code:"free_busy"};continue}
+    if(!res.ok){lastErr=apiError("free",res,data);lastErr.model=model;continue}
+    const msg=data&&data.choices&&data.choices[0]&&data.choices[0].message;const t=msg&&msg.content;if(!t||!String(t).trim()){lastErr={code:"empty_completion",model};continue}
+    try{const j=parseJSONLoose(t);if(c.freeWorks!==model){const cc=getCfg();cc.freeWorks=model;store.set("ai",cc)}AI.lastModel=model;return j}catch(e){lastErr={code:"invalid_json",model};continue}}
+   if(round===0&&waits.length&&waits.length>=order.length-1&&!signal?.aborted){const w=Math.min(45,Math.max(5,Math.min(...waits)));await sleep(w*1000);waits=[];continue}
+   break}
+  throw lastErr||{code:"free_busy"}},
  async callText(p,prompt,signal){const c=getCfg();
   if(p==="gemini"){const key=c.keys.gemini.trim();let pinned=c.models.gemini&&c.models.gemini!=="auto"?c.models.gemini:null;let cands;
    {try{cands=rankGemini(await geminiModels(key,signal)).slice(0,5)}catch(e){if(e.code==="cancelled"||e.code==="network"||e.code==="rate_limited")throw e;cands=[]}if(c.gemWorks&&!cands.includes(c.gemWorks))cands.unshift(c.gemWorks);else if(c.gemWorks)cands=[c.gemWorks,...cands.filter(x=>x!==c.gemWorks)];GEMINI_FALLBACK.forEach(m=>{if(!cands.includes(m))cands.push(m)})}
@@ -1142,7 +1159,7 @@ const AI={fn:null,state:"connecting",
 AI.ready=AI.init();
 const NEEDS_SETUP=["unavailable","bad_key","bad_code","no_credit","forbidden","bad_model","region","gemini_keytype"];
 const FATAL=["unavailable","not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed"];
-const ERRCOPY={rate_limited:"The AI service's usage limit was reached. Free plans allow a set number of requests per minute and per day: wait a minute and try again, or switch to another provider in AI setup.",region:"This AI service isn't available in your region. Choose another provider in AI setup.",session_expired:"Your session has expired. Sign in to Claude again, then retry.",refused:"The examiner couldn't assess this response. Try rewording it.",empty_completion:"The examiner returned nothing. Try again with a slightly longer answer.",invalid_json:"The examiner's reply came back garbled. Try again.",prompt_too_large:"That answer is too long to mark in one go. Shorten it and retry.",upstream_error:"The connection dropped while marking. Your answer is safe; try again.",network:"Your browser couldn't reach the AI service. If you're on a work, school or library network, it may block AI websites: try again at home or on your phone using mobile data. Also turn off ad-blockers or VPNs for this site.",busy:"Google's Gemini servers are very busy right now, and every Gemini model the site tried was overloaded. This is on Google's side and usually clears within a few minutes. Wait a minute and press Try again, or switch to OpenRouter (free) in AI setup.",gemini_keytype:"Google rejected this new-style (AQ.) key with ACCESS_TOKEN_TYPE_UNSUPPORTED. This is a known Google problem with some new keys. Fix: in AI Studio choose Create API key → Create API key in new project, copy the new key and paste it here. If it still fails, use OpenRouter (free) instead.",bad_key:"The API key was rejected. Check that you copied the whole key, with no spaces, in AI setup.",bad_code:"The group server rejected the passcode. Check it with the person who set up the server.",no_credit:"This account has no credit left. Add credit with the provider, or switch to a free provider (Gemini or Groq) in AI setup.",forbidden:"The API key doesn't have permission for this request. Create a new key in the Anthropic Console.",bad_model:"The selected AI model isn't available on this account. Choose another model in AI setup.",api_error:"The AI service returned an error."};
+const ERRCOPY={rate_limited:"The AI service's usage limit was reached. Free plans allow a set number of requests per minute and per day: wait a minute and try again, or switch to another provider in AI setup.",region:"This AI service isn't available in your region. Choose another provider in AI setup.",session_expired:"Your session has expired. Sign in to Claude again, then retry.",refused:"The examiner couldn't assess this response. Try rewording it.",empty_completion:"The examiner returned nothing. Try again with a slightly longer answer.",invalid_json:"The examiner's reply came back garbled. Try again.",prompt_too_large:"That answer is too long to mark in one go. Shorten it and retry.",upstream_error:"The connection dropped while marking. Your answer is safe; try again.",network:"Your browser couldn't reach the AI service. If you're on a work, school or library network, it may block AI websites: try again at home or on your phone using mobile data. Also turn off ad-blockers or VPNs for this site.",busy:"Google's Gemini servers are very busy right now, and every Gemini model the site tried was overloaded. This is on Google's side and usually clears within a few minutes. Wait a minute and press Try again, or switch to OpenRouter (free) in AI setup.",free_busy:"The free AI examiner is busy right now: each free model allows a couple of markings per minute. Wait about 30 seconds and press Try again.",gemini_keytype:"Google rejected this new-style (AQ.) key with ACCESS_TOKEN_TYPE_UNSUPPORTED. This is a known Google problem with some new keys. Fix: in AI Studio choose Create API key → Create API key in new project, copy the new key and paste it here. If it still fails, use OpenRouter (free) instead.",bad_key:"The API key was rejected. Check that you copied the whole key, with no spaces, in AI setup.",bad_code:"The group server rejected the passcode. Check it with the person who set up the server.",no_credit:"This account has no credit left. Add credit with the provider, or switch to a free provider (Gemini or Groq) in AI setup.",forbidden:"The API key doesn't have permission for this request. Create a new key in the Anthropic Console.",bad_model:"The selected AI model isn't available on this account. Choose another model in AI setup.",api_error:"The AI service returned an error."};
 const THINK_MSGS=["Reading your response carefully…","Checking grammar and vocabulary…","Comparing with ISLPR level descriptors…","Finding errors to highlight…","Writing tips and a model answer…","Almost done…"];
 
 /* generic marking runner: shows animated examiner, falls back offline */
@@ -2220,84 +2237,7 @@ function vocabQuiz(body,pool){if(pool.length<4){body.innerHTML=`<div class="empt
 @keyframes pop{50%{transform:scale(1.03)}}
 @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 </style>
-<script type="text/plain" id="workerCode">// ISLPR Prep Studio: group AI server (Cloudflare Worker, free plan)
-// Add these in the Worker's Settings → Variables and Secrets:
-//   ANTHROPIC_API_KEY (Secret) your Claude API key  ← used first if set
-//   or GEMINI_API_KEY (Secret) a free Google AI Studio key
-//   or GROQ_API_KEY   (Secret) a free Groq key
-//   GROUP_CODE      (Secret) a passcode you share with friends
-//   ALLOWED_ORIGINS your site address, e.g. https://yourname.github.io
-export default {
-  async fetch(request, env) {
-    const origin = request.headers.get("Origin") || "";
-    const allowed = (env.ALLOWED_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean);
-    const originOk = allowed.length === 0 || allowed.includes(origin);
-    const cors = {
-      "Access-Control-Allow-Origin": originOk && origin ? origin : "null",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "content-type, x-group-code",
-      "Vary": "Origin"
-    };
-    const json = (status, obj) => new Response(JSON.stringify(obj), { status, headers: { ...cors, "content-type": "application/json" } });
-    const fail = (status, message) => json(status, { error: { message } });
 
-    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
-    if (request.method !== "POST") return fail(405, "Use POST");
-    if (!originOk) return fail(403, "This site is not allowed to use the server");
-    if (!env.GROUP_CODE || request.headers.get("x-group-code") !== env.GROUP_CODE) return fail(403, "Wrong passcode");
-
-    let body;
-    try { body = await request.json(); } catch (e) { return fail(400, "Invalid request"); }
-    const prompt = String(body.prompt || "").slice(0, 60000);
-    if (!prompt) return fail(400, "No prompt");
-
-    try {
-      if (env.ANTHROPIC_API_KEY) {
-        const r = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: { "content-type": "application/json", "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
-          body: JSON.stringify({ model: env.ANTHROPIC_MODEL || "claude-sonnet-5-5", max_tokens: 8000, messages: [{ role: "user", content: prompt }] })
-        });
-        const d = await r.json();
-        if (!r.ok) return fail(r.status, (d.error && d.error.message) || "Claude API error");
-        return json(200, { text: (d.content || []).filter(b => b.type === "text").map(b => b.text).join("") });
-      }
-      if (env.GEMINI_API_KEY) {
-        const key = env.GEMINI_API_KEY;
-        let model = env.GEMINI_MODEL;
-        if (!model) {
-          const lr = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000", { headers: { "x-goog-api-key": key } });
-          const ld = await lr.json();
-          const names = (ld.models || []).filter(m => (m.supportedGenerationMethods || []).includes("generateContent"))
-            .map(m => m.name.replace("models/", "")).filter(n => /^gemini-[\d.]+-flash$/.test(n))
-            .sort((a, b) => parseFloat(b.match(/[\d.]+/)) - parseFloat(a.match(/[\d.]+/)));
-          model = names[0] || "gemini-flash-latest";
-        }
-        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-          method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": key },
-          body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 16384, responseMimeType: "application/json" } })
-        });
-        const d = await r.json();
-        if (!r.ok) return fail(r.status, (d.error && d.error.message) || "Gemini error");
-        const parts = (((d.candidates || [])[0] || {}).content || {}).parts || [];
-        return json(200, { text: parts.filter(p => !p.thought).map(p => p.text || "").join("") });
-      }
-      if (env.GROQ_API_KEY) {
-        const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST", headers: { "content-type": "application/json", Authorization: "Bearer " + env.GROQ_API_KEY },
-          body: JSON.stringify({ model: env.GROQ_MODEL || "openai/gpt-oss-120b", messages: [{ role: "user", content: prompt }], temperature: 0.4, max_completion_tokens: 8000 })
-        });
-        const d = await r.json();
-        if (!r.ok) return fail(r.status, (d.error && d.error.message) || "Groq error");
-        return json(200, { text: d.choices[0].message.content || "" });
-      }
-      return fail(500, "No API key is set on the server");
-    } catch (e) {
-      return fail(502, "Could not reach the AI service");
-    }
-  }
-};
-</script>
 <style>
 .keyrow{display:flex;gap:8px;flex-wrap:wrap}
 .keyrow input{flex:1 1 220px;min-width:0;width:auto}
@@ -2324,7 +2264,7 @@ function copyText(text,btn){const done=()=>{const o=btn.innerHTML;btn.textConten
  function fallback(){const t=document.createElement("textarea");t.value=text;document.body.append(t);t.select();try{document.execCommand("copy");done()}catch(e){toast("Select the text and copy it manually.")}t.remove()}}
 async function testConnection(out,only){out.innerHTML=`<p class="note">Sending a test request…</p>`;const t0=Date.now();const prev=getCfg().mode;
  try{await AI.ready;if(only)saveCfg({mode:only});const p=AI.pick();if(!p)throw{code:"unavailable"};const r=await AI.json('This is a connection test. Reply with only this JSON: {"ok":true}');
-  const c=getCfg();out.innerHTML=`<div class="okmsg"><b>Connected.</b> ${esc(AI.label(p))} replied in ${((Date.now()-t0)/1000).toFixed(1)} s${(()=>{const m=p==="gemini"?(AI.lastModel||c.gemWorks):c.models[p];return m&&m!=="auto"?" using "+esc(m):""})()}. AI marking is ready.</div>`;if(only)saveCfg({mode:prev});return true}
+  const c=getCfg();out.innerHTML=`<div class="okmsg"><b>Working.</b> ${esc(AI.label(p))} replied in ${((Date.now()-t0)/1000).toFixed(1)} s${(()=>{const m=p==="gemini"?(AI.lastModel||c.gemWorks):p==="free"?AI.lastModel:c.models[p];return m&&m!=="auto"?" using "+esc(m):""})()}. AI marking is ready.</div>`;if(only)saveCfg({mode:prev});return true}
  catch(e){if(only)saveCfg({mode:prev});const code=e&&e.code||"upstream_error";out.innerHTML=`<div class="badmsg"><b>Not connected.</b> ${code==="unavailable"?"Add a key below first.":esc(ERRCOPY[code]||ERRCOPY.upstream_error)}${e&&e.message&&code!=="unavailable"?`<br><span class="note">Message from the service${e.model?" ("+esc(e.model)+")":""}: ${esc(e.message)}</span>`:""}<br><span class="note mono">Error code: ${esc(code)}</span>${code==="network"&&window.claude?' <span class="note">Inside the Claude app, pages can only reach Claude. Other providers work when the site is on your own web address (for example GitHub Pages).</span>':""}</div>`;return false}}
 const KEY_GUIDES={
  gemini:{price:"free",title:"Google Gemini",sub:"Free with a Google account. No credit card.",k:"rd",steps:["Open <b>aistudio.google.com</b> and sign in with your Google (Gmail) account.","Accept the terms if asked, then choose <b>Get API key</b> (left menu or top right).","Choose <b>Create API key</b>. If asked for a project, pick the default or create a new one.","Choose <b>Copy key</b>. New keys start with <span class=\"mono\">AQ.</span> (older keys start with <span class=\"mono\">AIza</span>); both work. Paste it below and save."],
@@ -2341,50 +2281,30 @@ function providerCardHTML(p,c,active){const g=KEY_GUIDES[p];const model=c.models
   <div><label class="lbl" for="k-${p}">API key</label><div class="keyrow"><input type="password" id="k-${p}" autocomplete="off" spellcheck="false" placeholder="${(PROVIDERS[p].prefixes||[PROVIDERS[p].prefix]).join("… or ")}…" value="${esc(c.keys[p]||"")}"><button class="btn sm kshow" type="button">Show</button></div></div>
   <div><label class="lbl" for="m-${p}">Model</label><div class="keyrow"><select id="m-${p}" style="flex:1 1 200px;min-width:0"><option value="${p==="groq"?PROVIDERS.groq.def:"auto"}">${p==="groq"?PROVIDERS.groq.def+" (recommended)":p==="anthropic"?"claude-sonnet-5-5 (recommended)":"Choose automatically (recommended)"}</option>${model!=="auto"&&model!==PROVIDERS[p].def?`<option value="${esc(model)}" selected>${esc(model)}</option>`:""}</select><button class="btn sm mload" type="button">Load list</button></div></div>
   <div class="row"><button class="btn primary ksave" type="button">Save and test</button>${c.keys[p]?`<button class="btn ghost kdel" type="button">Remove</button>`:""}</div><div class="kout"></div></div>`}
-VIEWS.connect=function(w){const c=getCfg();const active=AI.pick();const inClaude=!!window.claude;
- w.innerHTML=`<div class="phead k-ac" style="margin-bottom:18px"><div><div class="k-bar"></div><h1>AI marking setup</h1><p>Connect an AI service once on each device. Every answer is then marked live with a level, highlighted errors, tips and model answers. Google Gemini and Groq are free.</p></div></div>
- <div class="card pad stack" style="margin-bottom:18px"><div class="row" style="justify-content:space-between"><div><span class="eyebrow">Status on this device</span><h3 id="cstat"></h3></div><div class="row"><label class="sr" for="amode">Which service to use</label><select id="amode"><option value="auto">Use the first available</option>${["claude","gemini","openrouter","anthropic","proxy"].map(p=>`<option value="${p}" ${c.mode===p?"selected":""}>Always use ${esc(PROVIDERS[p].name)}</option>`).join("")}</select><button class="btn primary k-ac" type="button" id="ctest">Test connection</button></div></div><div id="ctres"></div>
-  ${c.builtIn?`<div class="okmsg"><b>Built-in Claude marking is switched on for this site.</b> Every visitor is marked by Claude automatically. Nobody needs a key, and there's nothing to set up. The options below are only needed if you want to use your own key instead.</div>`:""}
-  ${inClaude?`<div class="callout k-ac"><b>You're inside the Claude app.</b> Here the site marks with Claude, using your Claude plan's normal usage allowance (no API key needed). On your own website, such as GitHub Pages, use a free Gemini or Groq key below.</div>`:""}</div>
- <div class="card pad stack" style="margin-bottom:18px"><h3>Which option should I choose?</h3><div class="tscroll"><table class="ltable cmp-table"><thead><tr><th>Service</th><th>Cost</th><th>Daily use</th><th>Quality of marking</th></tr></thead><tbody>
-  <tr><td class="first">Google Gemini</td><td>Free</td><td>Plenty for daily practice</td><td>Very good · recommended</td></tr>
-  <tr><td class="first">Groq</td><td>Free</td><td>About 1,000 requests a day</td><td>Good · only through a group server (Groq blocks direct website use)</td></tr>
-  <tr><td class="first">OpenRouter (free models)</td><td>Free</td><td>About 50 a day</td><td>Varies by model</td></tr>
-  <tr><td class="first">Claude API</td><td>Paid per answer</td><td>Unlimited (your credit)</td><td>Excellent</td></tr>
-  <tr><td class="first">Claude app</td><td>Your Claude plan</td><td>Your plan's limits</td><td>Excellent · only when opened inside Claude</td></tr></tbody></table></div>
-  <p class="note">Each friend can create their own free Gemini key in about two minutes. Or one person can run a group server (below) and share a passcode.</p></div>
- <div class="pcards">${["gemini","openrouter","anthropic"].map(p=>providerCardHTML(p,c,active)).join("")}</div>
- <div class="card pad stack k-ac" style="margin-top:18px"><div class="row" style="justify-content:space-between"><h3>Group server (one key for your group)</h3><span class="price free">Free to host</span></div>
-  <p>One person puts a key (a free Gemini key works) on a free Cloudflare Worker. Friends enter the server address and a passcode, and never see the key.</p>
-  <div class="grid g2"><div><label class="lbl" for="purl">Server address</label><input type="url" id="purl" autocomplete="off" spellcheck="false" placeholder="https://islpr-ai.yourname.workers.dev" value="${esc(c.proxy)}"></div><div><label class="lbl" for="pcode">Passcode</label><input type="password" id="pcode" autocomplete="off" value="${esc(c.code)}"></div></div>
-  <div class="row"><button class="btn primary" type="button" id="psave">Save and test</button>${c.proxy?`<button class="btn ghost" type="button" id="pdel">Remove</button>`:""}</div><div id="pout"></div>
-  <details class="guide k-ac"><summary>How to create the group server (10 minutes, owner only)</summary><div class="gbody">
-   <ol class="steps-list">
-    <li><span>Create a free account at <b>dash.cloudflare.com</b>, open <b>Workers &amp; Pages → Create → Create Worker</b>, name it (for example <span class="mono">islpr-ai</span>) and deploy.</span></li>
-    <li><span>Choose <b>Edit code</b>, replace everything with the code below, and press <b>Deploy</b>.</span></li>
-    <li><span>In <b>Settings → Variables and Secrets</b>, add <span class="mono">GEMINI_API_KEY</span> (Secret, your free Gemini key), <span class="mono">GROUP_CODE</span> (Secret, a passcode) and <span class="mono">ALLOWED_ORIGINS</span> (your site address, such as <span class="mono">https://yourname.github.io</span>). You can use <span class="mono">GROQ_API_KEY</span> or <span class="mono">ANTHROPIC_API_KEY</span> instead of the Gemini key.</span></li>
-    <li><span>Copy the Worker address (ending in <span class="mono">.workers.dev</span>) and the passcode into the boxes above, then save. Send your friends the same two things.</span></li>
-   </ol>
-   <div class="row" style="justify-content:space-between"><b>Worker code</b><button class="btn sm" type="button" id="wcopy">Copy code</button></div>
-   <pre class="code" id="wcode"></pre></div></details></div>
- <p class="note" style="margin-top:14px">Keys are saved only in this browser on this device and are sent only to the service they belong to. They are never part of the website file, so they stay private even when the site is public on GitHub.</p>`;
- const stat=()=>{const p=AI.pick();$("#cstat",w).textContent=p?"Connected via "+AI.label(p):"Not connected yet";$$(".pcard",w).forEach(el=>el.classList.toggle("active",el.dataset.p===p))};AI.ready.then(stat);stat();
- $("#wcode",w).textContent=$("#workerCode").textContent.trim();$("#wcopy",w).onclick=e=>copyText($("#workerCode").textContent.trim(),e.currentTarget);
- $("#amode",w).value=c.mode;$("#amode",w).onchange=e=>{saveCfg({mode:e.target.value});stat();toast("Saved")};
+VIEWS.connect=function(w){const c=getCfg();const inClaude=!!window.claude;
+ w.innerHTML=`<div class="phead k-ac" style="margin-bottom:18px"><div><div class="k-bar"></div><h1>AI marking</h1><p>AI marking is built in and free. There is nothing to set up, no account and no key. Just practise and press submit.</p></div></div>
+ <div class="card pad stack" style="margin-bottom:18px"><div class="row" style="justify-content:space-between"><div><span class="eyebrow">Status on this device</span><h3 id="cstat"></h3></div><button class="btn primary k-ac" type="button" id="ctest">Check it's working</button></div><div id="ctres"></div>
+  ${inClaude?`<div class="callout k-ac">You're inside the Claude app, so Claude marks your answers here. On your own website the free built-in AI is used.</div>`:""}</div>
+ <div class="card pad stack" style="margin-bottom:18px"><h3>How the free marking works</h3>
+  <div class="facts">
+   <div><b>Free, no sign-up</b><span>Answers are marked by open AI models hosted by OVHcloud's free AI Endpoints service. No account, key or payment is needed by you or your friends.</span></div>
+   <div><b>Three examiners</b><span>The site rotates between Mistral Small, Llama 3.3 70B and gpt-oss-120b, and automatically switches if one is busy.</span></div>
+   <div><b>Speed and limits</b><span>Marking takes about 20–60 seconds. Each device can mark about six answers a minute, which is more than enough for practice and mock tests.</span></div>
+   <div><b>Privacy</b><span>Your answers are sent to the AI service only to be marked. Don't type personal details such as your address or phone number into practice answers.</span></div>
+  </div></div>
+ <details class="guide k-ac"><summary>Optional backup: add your own free Google Gemini key</summary><div class="gbody"><p class="note">You don't need this. It's only a backup the site uses if the free built-in AI is ever unavailable. Gemini is also free.</p><div class="pcards">${providerCardHTML("gemini",c,AI.pick())}</div></div></details>`;
+ const stat=()=>{const p=AI.pick();$("#cstat",w).textContent=p==="free"?"Free AI marking is on ✓":p?"Connected via "+AI.label(p):"Not available"};AI.ready.then(stat);stat();
  $("#ctest",w).onclick=()=>testConnection($("#ctres",w)).then(stat);
  $$(".pcard",w).forEach(card=>{const p=card.dataset.p;const out=$(".kout",card);
   $(".kshow",card).onclick=e=>{const k=$("#k-"+p,card);k.type=k.type==="password"?"text":"password";e.currentTarget.textContent=k.type==="password"?"Show":"Hide"};
   $("#m-"+p,card).onchange=e=>{saveCfg({models:{[p]:e.target.value}});toast("Model saved")};
-  $(".mload",card).onclick=async e=>{const btn=e.currentTarget;const k=$("#k-"+p,card).value.trim();if(p!=="openrouter"&&p!=="anthropic"&&!k){toast("Paste your key first.");return}saveCfg({keys:{[p]:k}});btn.disabled=true;btn.textContent="Loading…";
-   try{const list=await listModels(p);const sel=$("#m-"+p,card);const cur=getCfg().models[p]||sel.value;sel.innerHTML=`<option value="${p==="groq"?PROVIDERS.groq.def:"auto"}">${p==="groq"?PROVIDERS.groq.def+" (recommended)":"Choose automatically (recommended)"}</option>`+list.filter(m=>m!==PROVIDERS.groq.def||p!=="groq").map(m=>`<option value="${esc(m)}" ${m===cur?"selected":""}>${esc(m)}</option>`).join("");out.innerHTML=`<p class="note">${list.length} models available.</p>`}
+  $(".mload",card).onclick=async e=>{const btn=e.currentTarget;const k=$("#k-"+p,card).value.trim();if(!k){toast("Paste your key first.");return}saveCfg({keys:{[p]:k}});btn.disabled=true;btn.textContent="Loading…";
+   try{const list=await listModels(p);const sel=$("#m-"+p,card);const cur=getCfg().models[p]||sel.value;sel.innerHTML=`<option value="auto">Choose automatically (recommended)</option>`+list.map(m=>`<option value="${esc(m)}" ${m===cur?"selected":""}>${esc(m)}</option>`).join("");out.innerHTML=`<p class="note">${list.length} models available.</p>`}
    catch(err){out.innerHTML=`<div class="badmsg">${esc(ERRCOPY[err.code]||"Couldn't load the model list.")}</div>`}btn.disabled=false;btn.textContent="Load list"};
   $(".ksave",card).onclick=async()=>{const k=$("#k-"+p,card).value.trim();if(!k){toast("Paste your API key first.");return}
-   const pre=PROVIDERS[p].prefixes||[PROVIDERS[p].prefix];if(/\s/.test(k)){out.innerHTML=`<div class="badmsg">The key contains a space or line break. Copy it again using the provider's <b>Copy key</b> button.</div>`;return}
-   const odd=pre[0]&&!pre.some(x=>k.startsWith(x));
-   saveCfg({keys:{[p]:k},models:{[p]:$("#m-"+p,card).value}});const ok=await testConnection(out,p);if(!ok&&odd)out.insertAdjacentHTML("beforeend",`<p class="note" style="margin-top:6px">${esc(KEY_GUIDES[p].title)} keys usually start with <span class="mono">${pre.map(esc).join("</span> or <span class=\"mono\">")}</span>. Check you copied the right key.</p>`);if(ok&&getCfg().mode!=="auto"&&getCfg().mode!==p)saveCfg({mode:p});stat();if(ok)toast(KEY_GUIDES[p].title+" connected")};
-  const del=$(".kdel",card);if(del)del.onclick=()=>{const cc=getCfg();delete cc.keys[p];cc.models[p]="auto";store.set("ai",cc);AI.refresh();toast("Key removed");rerender()}});
- $("#psave",w).onclick=async()=>{const u=$("#purl",w).value.trim();if(!/^https:\/\//.test(u)){toast("Enter the full server address starting with https://");return}saveCfg({proxy:u,code:$("#pcode",w).value.trim()});await testConnection($("#pout",w),"proxy");stat()};
- const pd=$("#pdel",w);if(pd)pd.onclick=()=>{saveCfg({proxy:"",code:""});toast("Group server removed");rerender()}};
+   if(/\s/.test(k)){out.innerHTML=`<div class="badmsg">The key contains a space or line break. Copy it again using <b>Copy key</b>.</div>`;return}
+   saveCfg({keys:{[p]:k},models:{[p]:$("#m-"+p,card).value}});await testConnection(out,p);stat()};
+  const del=$(".kdel",card);if(del)del.onclick=()=>{const cc=getCfg();delete cc.keys[p];cc.models[p]="auto";store.set("ai",cc);AI.refresh();toast("Key removed");rerender()}})};
 
 /* quick connect shown in place of results, so typed answers are never lost */
 function setupInlineHTML(hasOffline){return `<div class="card pad stack k-ac"><h3>Connect free AI marking to see your result</h3><p>Your answer is saved. Paste a free <b>Google Gemini</b> key (from aistudio.google.com → Get API key → Copy key) and it will be marked straight away.</p>
@@ -2565,7 +2485,7 @@ async function mockResults(body){const m=MOCK.m,A=MOCK.ans,steps=MOCK.steps;
   else if(j.skill==="reading"){const it=byId(READING,s.id);prompt=comprehensionPrompt("reading",it,ans);offline=()=>offlineComprehension(it,ans)}
   else if(j.skill==="listening"){const it=byId(LISTENING,s.id);prompt=comprehensionPrompt("listening",it,ans);offline=()=>offlineComprehension(it,ans)}
   else{const t=byId(WRITING,s.ids[j.w]);const text=ans[j.w]||"";if(wc(text)<5){MOCK.results[key(j)]={level:"0",summary:"No answer was written.",criteria:[],errors:[],tips:["Always write something for both tasks; a partial answer scores higher than none."],taskCoverage:t.points.map(p=>({point:p,covered:false}))};draw();continue}prompt=writingPrompt(t,text);offline=()=>offlineWriting(t,text)}
-  let r;try{r=await (async()=>{for(let t=0;;t++){try{return await AI.json(prompt)}catch(e){if(e&&(e.code==="rate_limited"||e.code==="busy"||e.code==="upstream_error")&&t<4){const wait=Math.max(20,Math.min(65,e.retryAfter||0||25*(t+1)));const st=$("#mstat .note");if(st)st.textContent=`The AI service's per-minute limit was reached. Waiting ${wait} seconds, then continuing automatically…`;await sleep(wait*1000);if(st)st.textContent="The AI examiner is marking each part in turn. Keep this page open.";continue}throw e}}})()}catch(e){const code=e&&e.code;if(FATAL.includes(code)||NEEDS_SETUP.includes(code)){if(FATAL.includes(code)&&code!=="unavailable")AI.set("off");r=offline();r.offline=true;r.why=code}else{r={failed:true,code}}}
+  let r;try{r=await (async()=>{for(let t=0;;t++){try{return await AI.json(prompt)}catch(e){if(e&&(e.code==="rate_limited"||e.code==="busy"||e.code==="free_busy"||e.code==="upstream_error"||e.code==="network")&&t<4){const wait=Math.max(20,Math.min(65,e.retryAfter||0||25*(t+1)));const st=$("#mstat .note");if(st)st.textContent=`The AI service's per-minute limit was reached. Waiting ${wait} seconds, then continuing automatically…`;await sleep(wait*1000);if(st)st.textContent="The AI examiner is marking each part in turn. Keep this page open.";continue}throw e}}})()}catch(e){const code=e&&e.code;if(FATAL.includes(code)||NEEDS_SETUP.includes(code)){if(FATAL.includes(code)&&code!=="unavailable")AI.set("off");r=offline();r.offline=true;r.why=code}else{r={failed:true,code}}}
   MOCK.results[key(j)]=r||{failed:true};if(!$("#mstat"))return;draw()}
  profile(body)}
 function profile(body){const m=MOCK.m,A=MOCK.ans,steps=MOCK.steps,jobs=MOCK.jobs,T=getTargets();const key=j=>j.i+"-"+(j.w??"");
