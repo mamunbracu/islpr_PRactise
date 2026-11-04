@@ -358,6 +358,7 @@ footer{max-width:1200px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-
       <a href="#reading" class="k-rd" data-r="reading"><span class="dot"></span>Reading</a>
       <a href="#listening" class="k-ls" data-r="listening"><span class="dot"></span>Listening</a>
       <a href="#writing" class="k-wr" data-r="writing"><span class="dot"></span>Writing</a>
+      <a href="#explore" class="k-ac" data-r="explore"><span class="dot"></span>Any topic</a>
       <a href="#mock" class="k-ac" data-r="mock"><span class="dot"></span>Mock tests</a>
       <a href="#progress" class="k-ac" data-r="progress"><span class="dot"></span>Progress</a>
       <a href="#connect" class="k-ac" data-r="connect"><span class="dot"></span>AI setup</a>
@@ -1452,7 +1453,7 @@ function listReading(w){const card=r=>{const b=bestFor(r.id);return `<button cla
  ${filterBarHTML(READING.length,"passages")}<section data-group><h2 style="margin-bottom:12px">Summary and Q&amp;A passages (${READING.filter(r=>r.type==="summary").length})</h2><div class="items k-rd stagger" style="margin-bottom:30px">${READING.filter(r=>r.type==="summary").map(card).join("")}</div></section>
  <section data-group><h2 style="margin-bottom:12px">Read-aloud passages (${READING.filter(r=>r.type==="aloud").length})</h2><div class="items k-rd stagger">${READING.filter(r=>r.type==="aloud").map(card).join("")}</div></section>`;
  $$(".item",w).forEach(b=>b.onclick=()=>{UI.reading=b.dataset.id;rerender()});bindFilter(w,"passages")}
-const DICTATE_NOTE=`<p class="note">${ic("mic",14)} Say your answer aloud first, as you would to the examiner. Then dictate it (tap the microphone on your phone or computer keyboard) or type what you said.</p>`;
+const DICTATE_NOTE=`<p class="note">${ic("mic",14)} Answer out loud, as you would to the examiner. Tap <b>Speak</b> under a box and your words appear as text, or type what you said.</p>`;;
 function passageHTML(text){return text.split(/\n\s*\n/).map(p=>`<p>${esc(p)}</p>`).join("")}
 function responseFormHTML(item,label){return `<div class="stack"><div><label class="lbl" for="sumx">${label}</label><textarea id="sumx" rows="6" placeholder="This ${label.includes("clip")?"recording":"passage"} is about…"></textarea><span class="note mono" id="sumwc">0 words · aim for 60–100</span></div>
  ${item.questions.map((q,i)=>`<div><div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:nowrap"><label class="lbl" for="q${i}">${i+1}. ${esc(q.q)}</label>${TTS.ok?`<button class="btn ghost sm hearq" type="button" data-q="${i}" aria-label="Hear question">${ic("vol",16)}</button>`:""}</div><textarea id="q${i}" rows="2"></textarea></div>`).join("")}</div>`}
@@ -2895,77 +2896,103 @@ function vocabBrowse(body,pool){const K=vKnown();
 @media (max-width:560px){.azbar{gap:5px;padding:8px}.azbar button{min-width:34px;height:34px;font-size:.92rem}}
 </style>
 <script>
-/* ===== Grammar & sentence structures ===== */
-const GRAMMAR={
- rules:{name:"Grammar rules",icon:"book",intro:"The grammar points that most often lower ISLPR writing and speaking levels, with teacher examples and a quick exercise for each.",items:[
-  {t:"Present perfect vs past simple",rule:"Use the past simple for a finished time (yesterday, last term, in 2023). Use the present perfect for experience up to now or with since/for.",right:["I taught Year 8 on my last placement.","I have taught Years 7 to 10 during my practicum.","I have studied in Sydney since 2023."],wrong:[["I have taught Year 8 last term.","I taught Year 8 last term."],["I am studying here since 2023.","I have been studying here since 2023."]],tip:"Finished time word → past simple. 'since', 'for', 'ever', 'already' → present perfect.",ex:["She has finished her practicum last month.","She finished her practicum last month."]},
-  {t:"Subject–verb agreement",rule:"The verb must agree with the real subject, not the nearest noun. 'Each', 'every', 'everyone' and 'the number of' take a singular verb; 'a number of' and 'people' take a plural verb.",right:["Each of the students has a laptop.","The results of the test show a clear improvement.","A number of parents have contacted the school."],wrong:[["The quality of the lessons are high.","The quality of the lessons is high."],["Every student need a calculator.","Every student needs a calculator."]],tip:"Cover the words between the subject and the verb, then check: 'The quality … is'.",ex:["The number of students in IPT have fallen.","The number of students in IPT has fallen."]},
-  {t:"Articles: a, an, the, or nothing",rule:"Use a/an for one of many (first mention). Use the for something specific or already known. Use no article for subjects, general plural or uncountable ideas.",right:["I teach mathematics and IPT.","A student asked a question. The student wanted to know why.","The principal approved the excursion."],wrong:[["I am a teacher of the mathematics.","I am a mathematics teacher."],["Students need the feedback to improve.","Students need feedback to improve."]],tip:"Ask: 'Which one?' If the reader knows exactly which one, use 'the'.",ex:["She is studying to become maths teacher.","She is studying to become a maths teacher."]},
-  {t:"Countable and uncountable nouns",rule:"Some nouns have no plural and never take 'a/an': information, feedback, advice, equipment, research, homework, software, furniture, knowledge.",right:["The teacher gave useful feedback.","We need more equipment for the computer lab.","Can I give you a piece of advice?"],wrong:[["She gave me many informations.","She gave me a lot of information."],["The students did their homeworks.","The students did their homework."]],tip:"Use 'a lot of', 'some', 'much' or 'a piece of' with these nouns.",ex:["The faculty bought new equipments for the lab.","The faculty bought new equipment for the lab."]},
-  {t:"Verb + preposition combinations",rule:"Many verbs and adjectives need a fixed preposition. Some verbs take no preposition at all.",right:["Teachers are responsible for student safety.","The result depends on the effort students make.","We discussed the problem. (no 'about')"],wrong:[["She is interested about computing.","She is interested in computing."],["Please contact with me tomorrow.","Please contact me tomorrow."]],tip:"Learn them as chunks: focus on, contribute to, comply with, interested in, good at, aware of, explain something to someone.",ex:["Can you explain me how this formula works?","Can you explain to me how this formula works?"]},
-  {t:"-ing or to + verb",rule:"After prepositions use -ing (look forward to hearing). Some verbs take -ing (suggest, recommend, enjoy, avoid); others take to + verb (would like, plan, decide, agree, need).",right:["I look forward to hearing from you.","I suggest using a spreadsheet.","I would like to request a meeting."],wrong:[["I look forward to hear from you.","I look forward to hearing from you."],["I suggest to use mini whiteboards.","I suggest using mini whiteboards."]],tip:"'to' in 'look forward to', 'committed to', 'used to (doing)' is a preposition, so add -ing.",ex:["Students enjoy to work in groups.","Students enjoy working in groups."]},
-  {t:"Relative clauses: who, which, that, whose",rule:"Use who for people, which for things, whose for possession. Add commas when the clause gives extra (non-essential) information.",right:["The student who scored highest received an award.","The laptops, which arrived last week, are already faulty.","A teacher whose class won the competition spoke at assembly."],wrong:[["The teacher which helped me is retiring.","The teacher who helped me is retiring."],["I emailed my mentor, she replied quickly.","I emailed my mentor, who replied quickly."]],tip:"Relative clauses are an easy way to join two short sentences and raise your level.",ex:["The app that students built it won a prize.","The app that students built won a prize."]},
-  {t:"Conditionals",rule:"Real/likely: If + present, will/can. Hypothetical: If + past, would. Formal email: 'Should you have any questions, please…'.",right:["If students practise daily, they will improve.","If I were the principal, I would fund a coding club.","Should you require further information, please contact me."],wrong:[["If I will have time, I will help.","If I have time, I will help."],["If I was the principal, I will change the timetable.","If I were the principal, I would change the timetable."]],tip:"Never use 'will' in the 'if' part of a real conditional.",ex:["If the network will fail again, we will use paper copies.","If the network fails again, we will use paper copies."]},
-  {t:"Passive voice for reports",rule:"Reports often focus on what happened, not who did it. Use be + past participle.",right:["The survey was completed by 400 students.","It was found that most students use phones daily.","It is recommended that the trial be continued."],wrong:[["The data was collect last term.","The data was collected last term."],["It recommended that teachers receive training.","It is recommended that teachers receive training."]],tip:"Use the passive in Findings and Recommendations; use active voice in emails and speeches.",ex:["The results was analysed by the faculty.","The results were analysed by the faculty."]},
-  {t:"Modal verbs for advice and hedging",rule:"Use should/must for recommendations; could/may/might to sound balanced; would for polite requests.",right:["Schools should introduce clear phone policies.","This approach may improve engagement.","Would you be able to attend on Thursday?"],wrong:[["Free transport will solve all traffic problems.","Free transport could help to reduce traffic."],["You must to submit the form by Friday.","You must submit the form by Friday."]],tip:"Modal + base verb, with no 'to' (except 'ought to', 'have to').",ex:["Teachers should to reflect on their lessons.","Teachers should reflect on their lessons."]},
-  {t:"Fewer / less, many / much, the majority of",rule:"fewer and many go with countable plurals; less and much with uncountable nouns. 'The majority of / a number of + plural noun' takes a plural verb.",right:["Fewer students chose IPT this year.","There is less time for practice.","The majority of respondents agree."],wrong:[["Less students attended the session.","Fewer students attended the session."],["There is too many homework.","There is too much homework."]],tip:"Can you count it? Yes → fewer/many. No → less/much.",ex:["We have less computers than last year.","We have fewer computers than last year."]},
-  {t:"Indirect questions in polite requests",rule:"In polite questions after 'Could you tell me…' or 'I would like to know…', use statement word order.",right:["Could you tell me when the meeting starts?","I would like to know whether the course is accredited.","Do you know where the laptops are stored?"],wrong:[["Could you tell me when does the meeting start?","Could you tell me when the meeting starts?"],["I want to know what is the cost.","I would like to know what the cost is."]],tip:"Subject before verb after the polite opening.",ex:["Can you let me know where is the computer lab?","Can you let me know where the computer lab is?"]},
-  {t:"Tense consistency in a story or report",rule:"When you describe a past event, stay in the past unless you deliberately move to now.",right:["During the lesson, two students left their seats and started a game. I moved closer and asked them to return to the task."],wrong:[["Last week the network failed and students lose their work.","Last week the network failed and students lost their work."]],tip:"Check every verb in a past narrative: is it in the past?",ex:["On Monday the class does a test and most students passed.","On Monday the class did a test and most students passed."]}]},
- structures:{name:"Sentence structures",icon:"pen",intro:"Use a mix of these structures. Level 4 writing combines simple, compound and complex sentences with good control.",items:[
-  {t:"Simple sentence",rule:"One subject + one verb. Clear and strong; use for key points.",pattern:"Subject + verb + (object).",right:["Data literacy matters.","The principal approved the proposal."],tip:"Use short sentences for emphasis after a long one.",ex:["Write a simple sentence stating the main idea of a paragraph about phones in class.","Phones distract students in class."]},
-  {t:"Compound sentence (FANBOYS)",rule:"Join two complete ideas with for, and, nor, but, or, yet, so. Put a comma before the joining word.",pattern:"Clause, + and / but / so / yet + clause.",right:["The lesson was challenging, but the students persisted.","The network failed, so the test was rescheduled."],tip:"Don't start every compound with 'and'; 'but' and 'so' show relationships.",ex:["Join: 'The laptops are new. Several are already faulty.'","The laptops are new, but several are already faulty."]},
-  {t:"Complex sentence",rule:"A main clause + a dependent clause starting with because, although, when, if, unless, while, since, as, whereas.",pattern:"Although/Because/When + clause, main clause.",right:["Although the course is short, it is very practical.","When students explain their reasoning, misconceptions become visible."],tip:"Put the dependent clause first for variety, and use a comma after it.",ex:["Join with 'although': 'Many students like coding. Few girls choose IPT.'","Although many students like coding, few girls choose IPT."]},
-  {t:"Compound-complex sentence",rule:"Two main clauses + at least one dependent clause. Shows high control.",pattern:"Because…, main clause, and/but main clause.",right:["Because the results were weak, the faculty introduced weekly reasoning tasks, and scores improved by the end of the year."],tip:"Use one or two per piece of writing, not in every sentence.",ex:["Combine: 'The trial was successful. Completion rose. We will continue.' (use because + and)","Because the trial was successful and completion rose, we will continue using the platform, and we will expand it to Year 7."]},
-  {t:"Participle phrase opener",rule:"Start with an -ing or past participle phrase to join actions with the same subject.",pattern:"Having + past participle…, / Using…, subject + verb.",right:["Having analysed the data, the team recommended two changes.","Using spreadsheets, students compared real phone plans."],tip:"The subject after the comma must be the one doing the action.",ex:["Rewrite: 'Students tested the app. Then they fixed the bugs.'","Having tested the app, students fixed the bugs."]},
-  {t:"Nominalisation (formal style)",rule:"Turn verbs or adjectives into nouns to sound formal and concise in reports and proposals.",pattern:"verb → noun: introduce → the introduction of; improve → an improvement in",right:["The introduction of mini whiteboards led to an improvement in participation.","There has been a decline in enrolments."],tip:"Great for report titles, findings and recommendations.",ex:["Make it formal: 'Enrolments declined because students didn't understand the course.'","The decline in enrolments was caused by a lack of understanding of the course."]},
-  {t:"Emphasis (cleft sentences)",rule:"Highlight one idea with 'What… is…' or 'It is… that…'. Very effective in speeches and speaking.",pattern:"What students need most is… / It is… that…",right:["What students need most is regular feedback.","It is consistency that makes routines work."],tip:"Use once or twice to sound fluent and persuasive.",ex:["Add emphasis: 'Students need clear routines.'","What students need most is clear routines."]},
-  {t:"Parallel structure",rule:"Keep items in a list in the same grammatical form.",pattern:"to plan, to teach and to assess / planning, teaching and assessing",right:["The program helps students to plan, to build and to test their apps.","Teachers are responsible for planning lessons, marking work and contacting parents."],tip:"Check lists of three in introductions and conclusions.",ex:["Fix: 'The course teaches coding, how to design databases and networks.'","The course teaches coding, database design and networking."]}]},
- starters:{name:"Sentence starters",icon:"spark",intro:"Ready-made sentence frames for each purpose in ISLPR writing and speaking. Fill them with your own content.",items:[
-  {t:"Opening and purpose (emails and letters)",frames:["I am writing to request…","I am writing on behalf of the Mathematics faculty regarding…","I am writing to inform you that…","As a pre-service teacher completing my final placement, I…"],sample:"I am writing on behalf of the Mathematics faculty to request funding for a class set of graphing calculators."},
-  {t:"Making a request",frames:["I would be grateful if you could…","Would it be possible to…?","Could you please let me know whether…","I would appreciate a reply by…"],sample:"I would be grateful if you could arrange a technician to inspect the laptops by Friday 20 June."},
-  {t:"Giving reasons (Reason / HOW)",frames:["This is because…","The main reason is that…","When we…, students…","This works because…"],sample:"When we design tasks with shared roles, students learn to communicate and value different viewpoints."},
-  {t:"Giving examples",frames:["For example, during…","For instance, in my Year 9 class…","A good example of this is…","To illustrate, …"],sample:"For instance, in my Year 9 class, students investigated the cheapest can design using surface area."},
-  {t:"Showing results (Effect)",frames:["As a result, …","Consequently, …","This means that…","This leads to…"],sample:"As a result, students became more engaged and their problem-solving improved."},
-  {t:"Contrasting and conceding",frames:["However, …","On the other hand, …","Although…, …","Critics argue that…; however, …"],sample:"Although calculators save time, students still need strong mental strategies."},
-  {t:"Recommending (reports and proposals)",frames:["It is recommended that…","I therefore recommend that the school…","The faculty should consider…","A practical solution would be to…"],sample:"It is recommended that all students complete a laboratory safety induction at the start of each year."},
-  {t:"Concluding",frames:["In conclusion, …","Overall, …","To sum up, …","Let us continue working together to…"],sample:"In conclusion, teamwork and respect are lifelong values that shape responsible citizens."},
-  {t:"Speaking: buying time and clarifying",frames:["That's an interesting question. Let me think…","Do you mean…, or…?","Could you rephrase that, please?","What I mean is…"],sample:"That's an interesting question. Do you mean phones in class specifically, or at school in general?"},
-  {t:"Speaking: talking about practicum (pre-service teacher)",frames:["On my last placement, I…","My supervising teacher suggested…","As a future teacher, I would…","One thing I learned from my practicum is…"],sample:"On my last placement, my supervising teacher suggested using mini whiteboards, and I found they showed me straight away who needed help."}]},
- punctuation:{name:"Punctuation",icon:"flag",intro:"Small punctuation errors add up. These are the ones examiners notice most.",items:[
-  {t:"Comma splices and run-on sentences",rule:"Don't join two complete sentences with only a comma. Use a full stop, a joining word, or a semicolon.",right:["The lesson finished early. Students reviewed their notes.","The lesson finished early, so students reviewed their notes."],wrong:[["The network failed, the test was postponed.","The network failed, so the test was postponed."]],tip:"Can each side stand alone as a sentence? Then a comma alone is wrong.",ex:["I emailed the parent, she called me back.","I emailed the parent, and she called me back."]},
-  {t:"Comma after introductory words",rule:"Use a comma after linking words and introductory phrases at the start of a sentence.",right:["However, the results improved.","In my view, homework should be short.","During the excursion, students visited a data centre."],wrong:[["As a result students became more confident.","As a result, students became more confident."]],tip:"However, Therefore, For example, In addition, As a result, → comma.",ex:["For example students compared phone plans.","For example, students compared phone plans."]},
-  {t:"Apostrophes",rule:"Use an apostrophe for possession (the student's laptop, the students' results) and contractions (it's = it is). Never for plurals.",right:["The school's policy is clear.","The students' results improved.","Its battery is faulty. (no apostrophe for possessive 'its')"],wrong:[["The teacher's are meeting today.","The teachers are meeting today."],["It's screen is broken.","Its screen is broken."]],tip:"Avoid contractions (it's, don't) in formal letters and reports.",ex:["The faculty's laptop's need repair's.","The faculty's laptops need repairs."]},
-  {t:"Capital letters",rule:"Capitalise names, places, days, months, school subjects that are languages or course names, and titles: Year 9, Term 2, Monday, IPT, Mathematics Advanced, Granville High School.",right:["I teach Year 10 Mathematics on Tuesdays in Term 3.","Dear Ms Chen,"],wrong:[["i will teach year 9 on monday.","I will teach Year 9 on Monday."]],tip:"Seasons (summer, winter) and general subjects in a sentence (maths) are usually lowercase.",ex:["the excursion is on wednesday in term 4.","The excursion is on Wednesday in Term 4."]},
-  {t:"Semicolons and colons",rule:"A semicolon joins two closely related sentences. A colon introduces a list or explanation after a complete sentence.",right:["The trial was successful; completion rose by 23%.","Students need three things: clear goals, practice and feedback."],wrong:[["Students need: goals, practice and feedback.","Students need three things: goals, practice and feedback."]],tip:"The words before a colon must be a complete sentence.",ex:["Please bring: a calculator, a ruler and a pencil.","Please bring the following: a calculator, a ruler and a pencil."]},
-  {t:"Numbers, dates and times",rule:"In formal writing, write one to nine as words and 10 and above as figures. Write Australian dates as Friday 20 June. Write times as 3:30 pm.",right:["Three students were absent, and 27 completed the test.","The meeting is on Thursday 5 September at 3:30 pm."],wrong:[["5 students were late on the 20th of june.","Five students were late on 20 June."]],tip:"Don't start a sentence with a figure: write 'Twenty students…'.",ex:["12 students attended the session on 3rd march.","Twelve students attended the session on 3 March."]}]}
+/* ===== Grammar for ISLPR writing: simple, practical ===== */
+const GRAM={
+ templates:{name:"Templates",icon:"pen",intro:"Copy a template, fill the blanks with your ideas, and you have a well-organised answer. Each one matches an ISLPR writing task type.",items:[
+  {t:"Formal email or letter (Task 1)",when:"Writing to a principal, parent, company, council or university.",parts:[["Greeting","Dear Ms Chen, / Dear Sir or Madam,"],["Paragraph 1 · Why you are writing","I am writing to request / inform you about / complain about ___."],["Paragraph 2 · Details","(who, what, when, where) The event will take place on ___ for ___ students."],["Paragraph 3 · Reasons or problem","This is important because ___. For example, ___."],["Paragraph 4 · What you want","I would be grateful if you could ___ by (date)."],["Ending","I look forward to hearing from you.\nYours sincerely, (if you know the name) / Yours faithfully, (Sir or Madam)\nSam Ahmed\nMathematics Teacher"]],sample:"Dear Mr Patel,\n\nI am writing to request funding for a class set of graphics calculators for our Year 11 Mathematics Advanced students.\n\nAt present, our faculty has only twelve calculators for a class of twenty-eight. As a result, students have to share during lessons and cannot practise at home before their assessment tasks.\n\nI would be grateful if you could approve $2,800 for thirty calculators by Friday 14 March, so that they arrive before the Term 2 assessment.\n\nI look forward to hearing from you.\n\nYours sincerely,\nSam Ahmed\nMathematics Teacher"},
+  {t:"Semi-formal email to a colleague (Task 1)",when:"Writing to your head teacher, a mentor or another teacher.",parts:[["Greeting","Hi Rachel, / Dear Rachel,"],["Opening","I hope your week is going well. I'm writing about ___."],["Main point","Could we ___? / I was wondering if ___."],["Details","I'm free on ___ after period ___."],["Ending","Thanks for your help.\nKind regards,\nSam"]],sample:"Hi Rachel,\n\nI hope your week is going well. I'm writing about the Year 9 algebra task.\n\nI was wondering if we could meet to moderate the marking before the results go home. I'm free on Thursday after period 4, or Friday at lunch.\n\nThanks for your help.\n\nKind regards,\nSam"},
+  {t:"Report (Task 2)",when:"Reporting on a survey, a trial, an incident or a program.",parts:[["Title","Report on ___"],["Introduction","The purpose of this report is to ___. The information is based on ___."],["Findings (use headings)","It was found that most students ___. However, ___."],["Problems","The main problem was ___, which led to ___."],["Recommendations","It is recommended that the school ___. In addition, ___."],["Conclusion","Overall, ___."]],sample:"Report on the Year 8 online homework trial\n\nIntroduction\nThe purpose of this report is to evaluate the online homework platform trialled in Year 8 Mathematics in Term 2. The information is based on a student survey and homework completion records.\n\nFindings\nIt was found that homework completion rose from 61% to 84%. Most students said the instant feedback helped them. However, eleven students had no reliable internet at home.\n\nRecommendations\nIt is recommended that the school continue the platform and open the library before school for students without internet.\n\nConclusion\nOverall, the trial was successful and should be expanded to Year 7."},
+  {t:"Proposal (Task 2)",when:"Suggesting a new club, program, purchase or change.",parts:[["Title","Proposal for ___"],["Aim","This proposal recommends that the school ___."],["Background / the problem","At present, ___. This means that ___."],["The plan","The program would run ___ (when, where, who, cost)."],["Benefits","This would help students to ___. It would also ___."],["Closing request","I therefore ask the executive to approve ___."]],sample:"Proposal for a lunchtime coding club\n\nAim\nThis proposal recommends that the school start a lunchtime coding club for Years 7 to 9.\n\nBackground\nAt present, students only meet programming in one IPT unit, and very few girls choose computing electives.\n\nThe plan\nThe club would run every Wednesday lunchtime in Room C4. Two teachers would supervise, and students would use free tools such as Scratch and Python.\n\nBenefits\nThe club would build problem-solving and teamwork, and could increase IPT enrolments.\n\nI therefore ask the executive to approve the club from Term 3."},
+  {t:"Speech or talk (Task 2)",when:"Speaking at an assembly, parent night or staff meeting.",parts:[["Greeting","Good morning, Principal, teachers and students."],["Introduce yourself and the topic","My name is ___, and today I would like to talk about ___."],["Point 1","Firstly, ___. For example, ___."],["Point 2","Secondly, ___. This means that ___."],["Point 3","Finally, ___."],["Conclusion and thanks","In conclusion, ___. Let us all ___. Thank you for listening."]],sample:"Good morning, Principal, teachers and students.\n\nMy name is Mr Ahmed, and today I would like to talk about teamwork and respect.\n\nFirstly, teamwork helps students learn. When we work in groups, we share ideas and solve problems we could not solve alone.\n\nSecondly, respect makes teamwork possible. This means listening to others, even when we disagree.\n\nIn conclusion, teamwork and respect are values for life, not only for school. Let us practise them in every class. Thank you for listening."},
+  {t:"Article (Task 2)",when:"Writing for a school newsletter, magazine or website.",parts:[["Catchy title","e.g. Why maths homework matters"],["Introduction","Hook the reader with a question or fact, then give your main idea."],["Body paragraph 1","Main idea → reason → example."],["Body paragraph 2","A second idea, or the other side: However, some people believe ___."],["Conclusion","Give your opinion again and a final thought or advice."]],sample:"Are phones helping or hurting learning?\n\nMost teenagers check their phones dozens of times a day. But should phones be allowed in class?\n\nOn the one hand, phones can be useful learning tools. For example, students can use calculator and graphing apps in mathematics.\n\nHowever, many teachers believe phones are a constant distraction. Notifications break concentration, and some students use them to message friends during lessons.\n\nIn my view, phones should stay in bags unless the teacher asks students to use them for a task."}]},
+ fixes:{name:"12 quick fixes",icon:"check",intro:"The 12 grammar mistakes that most often lower ISLPR writing levels. Each one has a simple rule, a wrong and right example, and a quick practice.",items:[
+  {t:"He / she / it + s",rule:"With one person or thing, add -s to the verb.",wrong:"The student need more time.",right:"The student needs more time.",ex:["Every teacher have a laptop.","Every teacher has a laptop."]},
+  {t:"Past time = past verb",rule:"If you say yesterday, last week or in 2024, use the past form.",wrong:"Last term I teach Year 8.",right:"Last term I taught Year 8.",ex:["Yesterday the students complete the test.","Yesterday the students completed the test."]},
+  {t:"Since / for = have + past participle",rule:"For something that started in the past and is still true, use have/has + verb.",wrong:"I study in Sydney since 2023.",right:"I have studied in Sydney since 2023.",ex:["She works at this school for five years.","She has worked at this school for five years."]},
+  {t:"a / an / the",rule:"Use a/an for one thing you mention first. Use the when the reader knows which one.",wrong:"I am maths teacher.",right:"I am a maths teacher.",ex:["Principal approved excursion.","The principal approved the excursion."]},
+  {t:"No 's' on these words",rule:"These words have no plural: information, feedback, advice, equipment, homework, software, research.",wrong:"She gave me many advices.",right:"She gave me a lot of advice.",ex:["Students finished their homeworks.","Students finished their homework."]},
+  {t:"Fixed prepositions",rule:"Learn them as pairs: interested in, good at, responsible for, depend on, focus on, contact someone (no 'with').",wrong:"I am interested about coding.",right:"I am interested in coding.",ex:["Please contact with me tomorrow.","Please contact me tomorrow."]},
+  {t:"Look forward to + -ing",rule:"After 'look forward to', 'suggest' and 'recommend', use the -ing form.",wrong:"I look forward to hear from you.",right:"I look forward to hearing from you.",ex:["I suggest to use mini whiteboards.","I suggest using mini whiteboards."]},
+  {t:"Modal + base verb",rule:"After can, should, must, will, would and could, use the plain verb with no 'to' and no -s.",wrong:"Teachers should to give feedback.",right:"Teachers should give feedback.",ex:["Students must to bring a calculator.","Students must bring a calculator."]},
+  {t:"If + present, will",rule:"Never put 'will' in the if part.",wrong:"If it will rain, we will cancel the excursion.",right:"If it rains, we will cancel the excursion.",ex:["If students will practise, they will improve.","If students practise, they will improve."]},
+  {t:"Polite questions: normal word order",rule:"After 'Could you tell me…' or 'I would like to know…', put the subject before the verb.",wrong:"Could you tell me when does the meeting start?",right:"Could you tell me when the meeting starts?",ex:["Can you let me know where is the lab?","Can you let me know where the lab is?"]},
+  {t:"Two sentences, not one long one",rule:"Don't join two full sentences with only a comma. Use a full stop, or and / but / so.",wrong:"The network failed, the test was postponed.",right:"The network failed, so the test was postponed.",ex:["I emailed the parent, she called me back.","I emailed the parent, and she called me back."]},
+  {t:"Comma after starters",rule:"Put a comma after However, Therefore, For example, As a result, In conclusion at the start of a sentence.",wrong:"However students enjoyed the task.",right:"However, students enjoyed the task.",ex:["For example students compared phone plans.","For example, students compared phone plans."]}]},
+ sentences:{name:"Better sentences",icon:"spark",intro:"Level 4 writing mixes short and longer sentences. These 8 patterns are easy to learn and make your writing sound more advanced.",items:[
+  {t:"Give a reason: because",pattern:"___ because ___.",ex1:"Students enjoyed the lesson because they used real data.",ex2:"I chose IPT because I love solving problems with technology.",ex:["Join: Students were tired. The lesson was after sport.","Students were tired because the lesson was after sport."]},
+  {t:"Show a result: so / As a result,",pattern:"___, so ___. / ___. As a result, ___.",ex1:"The laptops were old, so the faculty ordered new ones.",ex2:"We used mini whiteboards. As a result, I could see who needed help.",ex:["Join with 'so': The test was hard. Many students asked for help.","The test was hard, so many students asked for help."]},
+  {t:"Show contrast: Although",pattern:"Although ___, ___.",ex1:"Although calculators save time, students still need mental maths.",ex2:"Although the course is short, it is very practical.",ex:["Join with 'Although': Many students like coding. Few girls choose IPT.","Although many students like coding, few girls choose IPT."]},
+  {t:"Give an example: For example,",pattern:"___. For example, ___.",ex1:"Maths is everywhere. For example, students use percentages when they shop.",ex2:"Technology can help. For example, Desmos shows graphs instantly.",ex:["Add an example: Games can teach probability.","Games can teach probability. For example, students can roll dice and record the results."]},
+  {t:"Add information: which / who",pattern:"___, which ___. / The ___ who ___",ex1:"The laptops, which arrived last week, are already faulty.",ex2:"The student who scored highest received an award.",ex:["Join with 'who': I thanked my mentor. She helped me plan lessons.","I thanked my mentor, who helped me plan lessons."]},
+  {t:"Make a polite request",pattern:"I would be grateful if you could ___. / Would it be possible to ___?",ex1:"I would be grateful if you could send the timetable by Friday.",ex2:"Would it be possible to book the computer lab on Tuesday?",ex:["Make it polite: Send me the results.","I would be grateful if you could send me the results."]},
+  {t:"Recommend something",pattern:"I recommend that ___. / It is recommended that ___.",ex1:"I recommend that all Year 7 students complete a cyber-safety lesson.",ex2:"It is recommended that the school buy thirty graphics calculators.",ex:["Make it a recommendation: The school needs a coding club.","I recommend that the school start a coding club."]},
+  {t:"Compare two things: whereas / more … than",pattern:"___, whereas ___. / ___ is more ___ than ___.",ex1:"Python is text-based, whereas Scratch uses blocks.",ex2:"Online quizzes are faster to mark than paper tests.",ex:["Join with 'whereas': Year 7 enjoy games. Year 12 prefer past papers.","Year 7 enjoy games, whereas Year 12 prefer past papers."]}]},
+ phrases:{name:"Useful phrases",icon:"book",intro:"Ready-made sentence openings for every part of your writing. Tap a phrase to copy it.",items:[
+  {t:"Start an email or letter",list:["I am writing to request…","I am writing to inform you that…","I am writing on behalf of the Mathematics faculty…","I am writing to apologise for…"]},
+  {t:"Ask politely",list:["I would be grateful if you could…","Would it be possible to…?","Could you please let me know…","I would appreciate it if…"]},
+  {t:"Give reasons",list:["This is because…","The main reason is that…","This is important because…","One reason for this is…"]},
+  {t:"Give examples",list:["For example,…","For instance, in my Year 9 class,…","A good example of this is…","Such as…"]},
+  {t:"Add another idea",list:["In addition,…","Furthermore,…","Another benefit is that…","Also,…"]},
+  {t:"Show the other side",list:["However,…","On the other hand,…","Although…,","Some people believe…; however,…"]},
+  {t:"Show results",list:["As a result,…","Therefore,…","This means that…","This leads to…"]},
+  {t:"Recommend",list:["I recommend that…","It is recommended that…","The school should consider…","A practical solution would be to…"]},
+  {t:"Finish",list:["In conclusion,…","Overall,…","I look forward to hearing from you.","Thank you for your time and support."]}]},
+ check:{name:"Final check",icon:"flag",intro:"Use the last 5 minutes of the writing test to check these 10 things. Tick each one as you check.",items:[
+  {t:"Did I answer every dot point in the task?"},{t:"Is the format right? (greeting and sign-off for letters; a title for reports, articles and speeches)"},{t:"Does each paragraph have one main idea?"},{t:"Did I use linking words (However, For example, As a result)?"},{t:"Does every one-person verb end in -s (he needs, the school has)?"},{t:"Are past events in the past tense?"},{t:"Did I check a / an / the?"},{t:"Is every sentence complete, with no comma joining two sentences?"},{t:"Are capital letters right (Monday, Year 9, Term 2, names)?"},{t:"Am I close to the word count (150 or 250)?"}]}
 };
-VIEWS.grammar=function(w){const keys=Object.keys(GRAMMAR);let cur=store.get("gramTab","rules");if(!GRAMMAR[cur])cur="rules";const g=GRAMMAR[cur];
- w.innerHTML=`<div class="phead k-wr" style="margin-bottom:18px"><div><div class="k-bar"></div><h1>Grammar &amp; structures</h1><p>Grammar rules, sentence structures, sentence starters and punctuation for ISLPR writing and speaking. Every point has examples and a quick exercise with the answer.</p></div></div>
- <div class="ltabs" role="tablist">${keys.map(k=>`<button type="button" role="tab" class="k-wr" data-k="${k}" aria-selected="${k===cur}">${ic(GRAMMAR[k].icon,16)} ${esc(GRAMMAR[k].name)} <span class="mono" style="opacity:.7">${GRAMMAR[k].items.length}</span></button>`).join("")}</div>
- <p class="muted" style="margin-bottom:14px;max-width:70ch">${esc(g.intro)}</p>
- <div class="gramlist k-wr stagger">${g.items.map((it,i)=>gramItemHTML(it,i,cur)).join("")}</div>
- <div class="row" style="margin-top:18px"><a class="btn primary k-wr" href="#writing">Practise writing ${ic("right",16)}</a><a class="btn" href="#learn">Writing strategies</a></div>`;
- $$(".ltabs button",w).forEach(b=>b.onclick=()=>{store.set("gramTab",b.dataset.k);rerender()});
+VIEWS.grammar=function(w){const keys=Object.keys(GRAM);let cur=store.get("gram2","templates");if(!GRAM[cur])cur="templates";const g=GRAM[cur];
+ w.innerHTML=`<div class="phead k-wr" style="margin-bottom:18px"><div><div class="k-bar"></div><h1>Grammar for writing</h1><p>Simple tools for ISLPR writing: copy a template, fix the most common mistakes, build better sentences and check your work before you finish.</p></div></div>
+ <div class="ltabs gtabs" role="tablist">${keys.map(k=>`<button type="button" role="tab" class="k-wr" data-k="${k}" aria-selected="${k===cur}">${ic(GRAM[k].icon,16)} ${esc(GRAM[k].name)}</button>`).join("")}</div>
+ <p class="gintro">${esc(g.intro)}</p>
+ <div class="g2grid k-wr stagger" id="gbody">${g.items.map((it,i)=>CARD[cur](it,i)).join("")}</div>
+ <div class="row" style="margin-top:18px"><a class="btn primary k-wr" href="#writing">Practise writing ${ic("right",16)}</a><a class="btn" href="#explore">Write on your own topic</a></div>`;
+ $$(".ltabs button",w).forEach(b=>b.onclick=()=>{store.set("gram2",b.dataset.k);rerender()});
+ const copy=(t,b)=>{const done=()=>{const o=b.innerHTML;b.textContent="Copied ✓";setTimeout(()=>b.innerHTML=o,1500)};try{navigator.clipboard.writeText(t).then(done,()=>toast("Select the text and copy it"))}catch(e){toast("Select the text and copy it")}};
+ $$("[data-copy]",w).forEach(b=>b.onclick=()=>copy(b.dataset.copy,b));
  $$(".gex",w).forEach(box=>{const show=$(".gshow",box),inp=$("input",box),out=$(".gans",box);
-  show.onclick=()=>{const ans=box.dataset.a;const mine=inp?inp.value.trim():"";const norm=s=>s.toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
-   const match=mine&&norm(mine)===norm(ans);out.hidden=false;out.innerHTML=`${mine?`<div class="verdict ${match?"v-correct":"v-partial"}" style="display:inline-block;margin-bottom:6px">${match?"correct":"compare with the answer"}</div>`:""}<div class="ans model"><span class="eyebrow">Answer</span><br>${esc(ans)}</div>`};
-  if(inp)inp.addEventListener("keydown",e=>{if(e.key==="Enter")show.click()})})};
-function gramItemHTML(it,i,kind){
- const ex=it.ex?`<div class="gex" data-a="${esc(it.ex[1])}"><span class="eyebrow">Try it</span><p class="gq">${esc(it.ex[0])}</p><div class="keyrow"><label class="sr" for="gi-${kind}-${i}">Your answer</label><input type="text" id="gi-${kind}-${i}" autocomplete="off" placeholder="Type the corrected sentence…"><button class="btn sm gshow" type="button">Check / show answer</button></div><div class="gans" hidden></div></div>`:"";
- if(kind==="starters")return `<details class="guide k-wr gitem" ${i===0?"open":""}><summary>${esc(it.t)}</summary><div class="gbody"><div class="phr">${it.frames.map(f=>`<span>${esc(f)}</span>`).join("")}</div><div class="ans model"><span class="eyebrow">Sample sentence</span><br>${esc(it.sample)}</div></div></details>`;
- return `<details class="guide k-wr gitem" ${i===0?"open":""}><summary>${esc(it.t)}</summary><div class="gbody">
-  <p>${esc(it.rule)}</p>${it.pattern?`<div class="gpat"><span class="eyebrow">Pattern</span> <span class="mono">${esc(it.pattern)}</span></div>`:""}
-  <div class="cover">${it.right.map(r=>`<div><span>${esc(r)}</span></div>`).join("")}</div>
-  ${it.wrong?`<div class="mist">${it.wrong.map(([a,b])=>`<div><s>${esc(a)}</s><ins>${esc(b)}</ins></div>`).join("")}</div>`:""}
-  ${it.tip?`<div class="callout"><b>Tip.</b> ${esc(it.tip)}</div>`:""}${ex}</div></details>`}
+  show.onclick=()=>{const ans=box.dataset.a;const mine=inp.value.trim();const norm=s=>s.toLowerCase().replace(/[^a-z0-9]+/g," ").trim();const match=mine&&norm(mine)===norm(ans);
+   out.hidden=false;out.innerHTML=`${mine?`<b class="${match?"gok":"gno"}">${match?"✓ Correct!":"Compare with the answer:"}</b><br>`:""}${esc(ans)}`};
+  inp.addEventListener("keydown",e=>{if(e.key==="Enter")show.click()})});
+ const CK="gramcheck";const st=store.get(CK,{});$$(".gchk input",w).forEach(c=>{c.checked=!!st[c.dataset.i];c.onchange=()=>{const s=store.get(CK,{});s[c.dataset.i]=c.checked;store.set(CK,s)}});
+ const rs=$("#greset",w);if(rs)rs.onclick=()=>{store.set(CK,{});rerender()}};
+const tryHTML=(ex,id)=>`<div class="gex" data-a="${esc(ex[1])}"><span class="eyebrow">Practice</span><p class="gq">${esc(ex[0])}</p><div class="keyrow"><label class="sr" for="${id}">Your answer</label><input type="text" id="${id}" autocomplete="off" placeholder="Write it correctly…"><button class="btn sm gshow" type="button">Check</button></div><div class="gans" hidden></div></div>`;
+const CARD={
+ templates:(it,i)=>{const plain=it.parts.map(([a,b])=>`${a}: ${b}`).join("\n\n");return `<article class="card pad stack gcard gwide"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><h3>${esc(it.t)}</h3><p class="note">${esc(it.when)}</p></div><button class="btn sm" type="button" data-copy="${esc(plain)}">Copy template</button></div>
+  <ol class="gparts">${it.parts.map(([a,b])=>`<li><b>${esc(a)}</b><span>${esc(b).replace(/\n/g,"<br>")}</span></li>`).join("")}</ol>
+  <details class="guide k-wr"><summary>See a sample answer</summary><div class="gbody"><div class="marked samplebox">${esc(it.sample)}</div><button class="btn sm" type="button" data-copy="${esc(it.sample)}">Copy sample</button></div></details></article>`},
+ fixes:(it,i)=>`<article class="card pad stack gcard"><h3><span class="gnum">${i+1}</span> ${esc(it.t)}</h3><p class="grule">${esc(it.rule)}</p><div class="gwr"><div class="gw">✗ ${esc(it.wrong)}</div><div class="gr">✓ ${esc(it.right)}</div></div>${tryHTML(it.ex,"gf"+i)}</article>`,
+ sentences:(it,i)=>`<article class="card pad stack gcard"><h3><span class="gnum">${i+1}</span> ${esc(it.t)}</h3><div class="gpat">${esc(it.pattern)}</div><ul class="gexs"><li>${esc(it.ex1)}</li><li>${esc(it.ex2)}</li></ul>${tryHTML(it.ex,"gs"+i)}</article>`,
+ phrases:(it,i)=>`<article class="card pad stack gcard"><h3>${esc(it.t)}</h3><div class="gphr">${it.list.map(p=>`<button type="button" data-copy="${esc(p)}">${esc(p)}</button>`).join("")}</div></article>`,
+ check:(it,i)=>`<label class="card gchk"><input type="checkbox" data-i="${i}"><span><b>${i+1}.</b> ${esc(it.t)}</span></label>${i===GRAM.check.items.length-1?`<div><button class="btn sm" type="button" id="greset">Untick all</button></div>`:""}`};
 </script>
 <style>
-.gramlist{display:flex;flex-direction:column;gap:10px}
-.gitem summary{font-size:1.05rem}
-.gpat{padding:8px 12px;border-radius:10px;background:var(--surface-2);font-size:.92rem}
-.gex{border:1px dashed color-mix(in srgb,var(--c) 45%,var(--line));border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;background:color-mix(in srgb,var(--c-soft) 50%,var(--surface))}
-.gq{font-family:var(--f-read);font-size:1.05rem}
-.gex input[type=text]{flex:1 1 220px;width:auto;min-width:0}
+.gintro{max-width:70ch;margin:0 0 16px;font-size:1.02rem}
+.g2grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:14px;align-items:start}
+.g2grid .gwide{grid-column:1/-1}
+.gcard h3{display:flex;align-items:center;gap:10px;font-size:1.12rem}
+.gnum{flex:none;width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:.9rem;color:var(--on-c);background:linear-gradient(135deg,var(--c),var(--c2))}
+.grule{font-size:1.02rem}
+.gwr{display:flex;flex-direction:column;gap:6px}
+.gw,.gr{padding:9px 12px;border-radius:10px;font-family:var(--f-read);font-size:1.02rem}
+.gw{background:var(--bad-soft,color-mix(in srgb,#e5484d 12%,var(--surface)));text-decoration:line-through;text-decoration-thickness:1px;color:var(--ink)}
+.gr{background:var(--ok-soft);color:var(--ink)}
+.gpat{padding:10px 12px;border-radius:10px;background:var(--surface-2);font-family:var(--f-mono,monospace);font-size:.95rem;font-weight:700}
+.gexs{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-family:var(--f-read)}
+.gparts{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;counter-reset:gp}
+.gparts li{display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:12px;padding:10px 12px;border-radius:12px;background:var(--surface-2)}
+.gparts li b{color:var(--c)}
+.gphr{display:flex;flex-wrap:wrap;gap:8px}
+.gphr button{border:1px solid var(--line);background:var(--surface-2);color:var(--ink);border-radius:999px;padding:7px 12px;font:inherit;font-size:.95rem;cursor:pointer}
+.gphr button:hover{border-color:var(--c)}
+.gchk{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;cursor:pointer;grid-column:1/-1;font-size:1.02rem}
+.gchk input{width:22px;height:22px;flex:none;margin-top:2px;accent-color:var(--wr)}
+.gchk:has(input:checked){background:var(--ok-soft)}
+.gex{border:1px dashed color-mix(in srgb,var(--c) 45%,var(--line));border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.gq{font-family:var(--f-read);font-size:1.02rem}
+.gex input[type=text]{flex:1 1 200px;width:auto;min-width:0}
+.gans{padding:10px 12px;border-radius:10px;background:var(--surface-2);font-family:var(--f-read)}
+.gok{color:var(--ok,#1a7f4b)}.gno{color:var(--muted)}
+@media (max-width:600px){.gtabs{display:grid;grid-template-columns:1fr 1fr;gap:6px}.gtabs button{justify-content:center;padding:8px 8px;font-size:.86rem}.gtabs button:last-child{grid-column:1/-1}.gparts li{grid-template-columns:1fr;gap:4px}}
 </style>
 
 <style>
@@ -3105,7 +3132,7 @@ function toolkitHTML(){const T=SPEAK_TOOLKIT;return `<details class="guide k-sp"
  <details class="guide k-sp"><summary>Linking and hedging phrases</summary><div class="gbody"><div class="phr">${T.linking.concat(T.hedges).map(p=>`<span>${esc(p)}</span>`).join("")}</div></div></details>`}
 function listSpeaking(w){w.innerHTML=`<div class="phead k-sp"><div><div class="k-bar"></div><h1>Speaking</h1><p>A live, one-on-one interview with familiar questions about you, your work and everyday topics. The examiner listens for fluency, vocabulary, accuracy and how easily you are understood.</p></div></div>
  ${strategyBannerHTML("speaking")}
- <div class="callout k-sp" style="margin-bottom:22px">${ic("mic",16)} The examiner's questions are read aloud. Answer out loud as if in the room, then dictate or type what you said so the AI examiner can assess it. On phones, the microphone key on your keyboard turns speech into text.</div>
+ <div class="callout k-sp" style="margin-bottom:22px">${ic("mic",16)} This is a two-way voice interview. The examiner asks each question out loud, the microphone switches on and you answer by speaking. When you stop talking, the examiner reacts, may ask a follow-up question, and moves on. At the end, the AI examiner marks the whole interview. Works best in Chrome, Edge or Safari; you can also type.</div>
  <div class="ws k-sp" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)"><div style="min-width:0">${filterBarHTML(SPEAKING.length,"topics")}<div class="items k-sp stagger" style="grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr))">${SPEAKING.map(s=>{const b=bestFor(s.id);return `<button class="item" type="button" data-id="${s.id}">${b?`<span class="done">${esc(b)}</span>`:""}<span class="meta"><span class="chip">${esc(s.level)}</span><span class="chip line">${s.qs.length} questions</span></span><h4>${esc(s.title)}</h4><span class="note">“${esc(s.qs[0])}”</span></button>`}).join("")}</div></div>
  <div class="stack">${toolkitHTML()}</div></div>`;
  $$(".item",w).forEach(b=>b.onclick=()=>{UI.speaking=b.dataset.id;rerender()});bindFilter(w,"topics")}
@@ -3259,6 +3286,287 @@ VIEWS.progress=function(w){const T=getTargets();const H=getHist();
  $$("select[data-s]",w).forEach(sel=>sel.onchange=()=>{const t=getTargets();t[sel.dataset.s]=sel.value;store.set("targets",t);toast("Target saved");rerender()});
  let armed=false;$("#clrh",w).onclick=e=>{if(!armed){armed=true;e.target.textContent="Click again to delete all history";setTimeout(()=>{armed=false;e.target.textContent="Clear history"},3000);return}store.set("history",[]);store.del("mockresults");toast("History cleared");rerender()}};
 
+</script>
+<script>
+/* ===== Speech to text (browser speech recognition) ===== */
+const STT={SR:window.SpeechRecognition||window.webkitSpeechRecognition||null,rec:null,active:false,final:"",heard:false,last:0,iv:null,h:null,blocked:false,
+ get ok(){return !!this.SR&&!this.blocked},
+ start(h){this.stop();if(!this.SR){h.onError&&h.onError("unsupported");return false}
+  this.h=h;this.final="";this.heard=false;this.last=Date.now();this.active=true;this._open();
+  this.iv=setInterval(()=>{if(!this.active)return;const sm=this.h.silenceMs||0;if(sm&&this.heard&&Date.now()-this.last>sm){const f=this.h.onSilence;if(f)f()}},400);return true},
+ _open(){let r;try{r=new this.SR()}catch(e){this._fail("unsupported");return}this.rec=r;r.lang="en-AU";r.continuous=true;r.interimResults=true;r.maxAlternatives=1;
+  r.onresult=e=>{let interim="";for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0].transcript;if(e.results[i].isFinal)this.final+=(this.final&&!/\s$/.test(this.final)?" ":"")+t.trim()+" ";else interim+=t}
+   this.last=Date.now();if((this.final+interim).trim())this.heard=true;this.h&&this.h.onText&&this.h.onText(this.final.trim(),interim.trim())};
+  r.onspeechstart=()=>{this.last=Date.now()};
+  r.onerror=e=>{const c=e.error||"error";if(c==="no-speech"||c==="aborted")return;if(c==="not-allowed"||c==="service-not-allowed"||c==="audio-capture"||c==="network"||c==="language-not-supported")this._fail(c)};
+  r.onend=()=>{if(this.active&&this.rec===r)setTimeout(()=>{if(this.active&&this.rec===r)this._open()},200)};
+  try{r.start();this.h.onStart&&this.h.onStart()}catch(e){this._fail("not-allowed")}},
+ _fail(c){const h=this.h;this.stop();if(c==="not-allowed"||c==="service-not-allowed"||c==="audio-capture")this.blocked=true;h&&h.onError&&h.onError(c)},
+ stop(){this.active=false;clearInterval(this.iv);this.iv=null;const r=this.rec;this.rec=null;if(r){r.onend=null;r.onresult=null;r.onerror=null;try{r.stop()}catch(e){}}const h=this.h;this.h=null;h&&h.onStop&&h.onStop()}};
+const MICMSG={unsupported:"Voice answers need Chrome, Edge or Safari. You can type your answer instead.","not-allowed":"The microphone is blocked. Allow microphone access for this site (padlock icon next to the web address), then reload. You can type for now.","service-not-allowed":"Speech recognition is turned off in this browser. Type your answer, or try Chrome.","audio-capture":"No microphone was found. Plug one in or type your answer.",network:"Speech recognition needs an internet connection. Type your answer for now.","language-not-supported":"Australian English recognition isn't available here. Type your answer."};
+const micErr=c=>MICMSG[c]||"The microphone stopped. You can type your answer instead.";
+
+/* one-tap Speak button for any answer box */
+function attachMic(ta){if(!ta||ta.dataset.mic)return;ta.dataset.mic=1;const b=document.createElement("button");b.type="button";b.className="btn sm micbtn";b.innerHTML=`${ic("mic",15)} <span>Speak</span>`;b.setAttribute("aria-pressed","false");
+ const wrap=document.createElement("div");wrap.className="microw";const live=document.createElement("span");live.className="note miclive";wrap.append(b,live);ta.after(wrap);
+ if(!STT.SR){b.disabled=true;b.title=MICMSG.unsupported;live.textContent="Voice typing isn't available in this browser. Type instead.";return}
+ let base="",on=false;const off=()=>{on=false;b.setAttribute("aria-pressed","false");b.querySelector("span").textContent="Speak";live.textContent="";$$(".micbtn").forEach(x=>x.classList.remove("rec"))};
+ b.onclick=()=>{if(on){STT.stop();return}TTS.stop();base=ta.value.trim();on=true;b.setAttribute("aria-pressed","true");b.classList.add("rec");b.querySelector("span").textContent="Stop";live.textContent="Listening… speak now";
+  STT.start({onText:(f,i)=>{ta.value=(base?base+" ":"")+f;live.textContent=i?"… "+i:"Listening…";ta.dispatchEvent(new Event("input",{bubbles:true}))},onStop:off,onError:c=>{off();toast(micErr(c))}})}}
+const _bindResponse=bindResponse;
+bindResponse=function(root,item){const get=_bindResponse(root,item);$$("#sumx, textarea[id^=q]",root).forEach(attachMic);return get};
+
+/* ===== Speaking: two-way voice interview ===== */
+const REACT=["Thank you.","Okay, thanks.","I see. Thank you.","Right, thanks for that.","That's interesting, thank you."];
+function followPrompt(set,q,a){return `You are a friendly, professional ISLPR speaking examiner in a live one-to-one interview with a candidate who is training to be a secondary Mathematics and IPT (computing) teacher in New South Wales. Interview topic: "${set.title}".
+You just asked: "${q}"
+The candidate answered (speech-to-text transcript, so ignore punctuation): "${a}"
+Reply as the examiner would, naturally and briefly. Return JSON: {"reaction":"a short natural acknowledgement of what they said, max 12 words, no comments about their English","followup":"ONE short follow-up question, max 22 words, that asks them to explain, give a specific example, compare or justify something they mentioned. Use \\"\\" if no follow-up is needed."}`}
+function withTimeout(p,ms,ctl){return Promise.race([p,new Promise((_,rej)=>setTimeout(()=>{try{ctl&&ctl.abort()}catch(e){}rej({code:"timeout"})},ms))])}
+
+speakingInterview=function(w,set,opts){const exam=!!opts.exam;const N=set.qs.length;const ans=set.qs.map(()=>""),fuQ=set.qs.map(()=>""),fuA=set.qs.map(()=>"");
+ let qi=-1,phase="main",qt=null,busy=false,ended=false,fuCount=0;
+ const voiceDefault=STT.ok?store.get("spVoice",true):false;
+ w.innerHTML=`${exam?"":`<button class="back" type="button">${ic("left",18)} All topics</button>`}
+ <div class="ws k-sp" ${exam?'style="grid-template-columns:1fr"':""}>
+  <div class="stack">
+   <div class="card pad stack" id="iv">
+    <div class="row" style="justify-content:space-between"><div><span class="eyebrow">Interview</span><h2>${esc(set.title)}</h2></div><div class="qdots" id="qd">${set.qs.map(()=>"<i></i>").join("")}</div></div>
+    <div class="examiner"><div class="avatar" id="av"></div><div class="bubble" id="bq">Hello, thanks for coming in today. I'll ask you some questions about <b>${esc(set.title.toLowerCase())}</b>. Just answer out loud, as you would in the real interview.</div></div>
+    <div class="ivopts" id="ivopts">
+     <div class="tabs" role="group" aria-label="How you answer"><button type="button" data-v="1" aria-pressed="${voiceDefault}">${ic("mic",15)} Answer by voice</button><button type="button" data-v="0" aria-pressed="${!voiceDefault}">Type answers</button></div>
+     <label class="row note" style="gap:6px"><input type="checkbox" id="fu" ${store.get("spFollow",!exam)?"checked":""}> Examiner asks follow-up questions</label>
+     <label class="row note voiceonly" style="gap:6px"><input type="checkbox" id="auto" ${store.get("spAuto",true)?"checked":""}> Move on when I stop talking (4 seconds)</label>
+     ${TTS.ok?`<label class="row note" style="gap:6px"><input type="checkbox" id="lo"> Listen only (hide question text)</label>`:""}
+    </div>
+    <p class="note" id="vnote">${STT.SR?"":"Voice answers need Chrome, Edge or Safari. In this browser, type what you would say."}</p>
+    <div id="ia"><button class="btn primary" type="button" id="startiv">${ic("play",16)} Start the interview</button></div>
+   </div>
+  </div>
+  ${exam?"":`<div class="stack sticky">${toolkitHTML()}</div>`}
+ </div>
+ <div id="sres" class="stack" style="margin-top:24px"></div>`;
+ const back=$(".back",w);if(back)back.onclick=()=>{ended=true;STT.stop();TTS.stop();UI.speaking=null;rerender()};
+ const av=$("#av",w),bq=$("#bq",w),ia=$("#ia",w);
+ let voice=voiceDefault;const vtabs=$$("#ivopts .tabs button",w);
+ const setVoice=v=>{voice=!!v&&!!STT.SR;store.set("spVoice",voice);vtabs.forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.v===+voice)));$$(".voiceonly",w).forEach(x=>x.hidden=!voice);w.classList.toggle("typing",!voice)};
+ vtabs.forEach(b=>b.onclick=()=>{if(b.dataset.v==="1"&&!STT.SR){toast(MICMSG.unsupported);return}setVoice(b.dataset.v==="1");if(qi>=0&&!busy){if(voice)listen();else{STT.stop();micUI("off")}}});setVoice(voiceDefault);
+ $("#fu",w).onchange=e=>store.set("spFollow",e.target.checked);const autoEl=$("#auto",w);autoEl.onchange=e=>store.set("spAuto",e.target.checked);
+ const lo=()=>$("#lo",w)&&$("#lo",w).checked;
+ const speak=(t,then)=>{STT.stop();if(!TTS.ok){then&&then();return}av.classList.add("talk");micUI("talk");TTS.say(t,{rate:.97,onEnd:()=>{av.classList.remove("talk");if(!ended)then&&then()}})};
+ const curQ=()=>phase==="main"?set.qs[qi]:fuQ[qi];
+ function micUI(state){const m=$("#mic",w);if(!m)return;m.dataset.s=state;const st=$("#mst",w);if(!st)return;
+  st.textContent=state==="on"?"Listening… speak now":state==="talk"?"The examiner is speaking…":state==="think"?"The examiner is thinking…":voice?"Microphone paused":"Type your answer below";
+  const p=$("#mpause",w);if(p){p.hidden=!voice||state==="talk"||state==="think";p.innerHTML=state==="on"?`${ic("stop",15)} Pause mic`:`${ic("mic",15)} Start mic`}}
+ let base="";
+ function listen(){if(ended||!voice)return;const sa=$("#sa",w);if(!sa)return;base=sa.value.trim();
+  STT.start({silenceMs:autoEl.checked?4000:0,
+   onStart:()=>micUI("on"),
+   onText:(f,i)=>{sa.value=(base?base+" ":"")+f;$("#interim",w).textContent=i;sa.dispatchEvent(new Event("input"))},
+   onSilence:()=>{if(wc(sa.value)>=4)done()},
+   onStop:()=>{const m=$("#mic",w);if(m&&m.dataset.s==="on")micUI("off")},
+   onError:c=>{micUI("off");$("#vnote",w).textContent=micErr(c);if(STT.blocked){setVoice(false);toast(micErr(c))}}})}
+ function render(){$$("#qd i",w).forEach((d,i)=>d.className=i<qi?"ok":i===qi?"on":"");const q=curQ();const fu=phase==="fu";
+  bq.innerHTML=(fu?`<span class="eyebrow">Follow-up</span><br>`:"")+(lo()?`<span class="muted">${fu?"Follow-up question":"Question "+(qi+1)} — listen carefully.</span> <button class="btn ghost sm" type="button" id="reveal">Show text</button>`:esc(q));const rv=$("#reveal",w);if(rv)rv.onclick=()=>bq.textContent=q;
+  const last=qi===N-1;
+  ia.innerHTML=`<div class="stack">
+   <div class="micpanel"><button type="button" class="mic" id="mic" data-s="off" aria-label="Microphone">${ic("mic",30)}</button><div class="stack" style="gap:4px;min-width:0"><b id="mst">…</b><span class="note" id="interim"></span><div class="row" style="gap:6px"><button class="btn sm" type="button" id="mpause" hidden></button>${TTS.ok?`<button class="btn sm" type="button" id="rep">${ic("vol",16)} Repeat question</button>`:""}</div></div><span id="qtm">${timerEl("aim 45–90 s")}</span></div>
+   <label class="lbl" for="sa">${voice?"What you said (you can correct it)":"Your answer"}</label><textarea id="sa" rows="5" placeholder="${voice?"Your words appear here as you speak…":"Type what you would say…"}"></textarea>
+   <div class="row" style="justify-content:space-between"><span class="note mono" id="saw">0 words</span><button class="btn primary" type="button" id="nq">${voice?"I've finished":last&&fu?"Finish the interview":"Next"} ${ic("right",16)}</button></div></div>`;
+  if(!exam&&!fu){ia.firstElementChild.insertAdjacentHTML("beforeend",speakSampleHTML(set,qi));bindSpeakSample(ia,set,qi)}
+  const sa=$("#sa",w);sa.value=fu?fuA[qi]:ans[qi];sa.oninput=e=>{if(fu)fuA[qi]=sa.value;else ans[qi]=sa.value;$("#saw",w).textContent=wc(sa.value)+" words";if(e&&e.isTrusted&&STT.active){base=sa.value.trim();STT.final=""}};sa.oninput();
+  qt&&qt.stop();qt=new Timer($("#qtm .timer",w),{countUp:true}).start();
+  const rep=$("#rep",w);if(rep)rep.onclick=()=>speak(curQ(),listen);
+  $("#mpause",w).onclick=()=>{if(STT.active){STT.stop();micUI("off")}else listen()};
+  $("#mic",w).onclick=()=>{if(!voice){setVoice(true);if(!voice)return}if(STT.active){STT.stop();micUI("off")}else listen()};
+  $("#nq",w).onclick=()=>done(true);micUI("off")}
+ const skip={armed:false};
+ async function done(manual){if(busy)return;const sa=$("#sa",w);const text=sa.value.trim();
+  if(manual&&wc(text)<3&&!skip.armed){skip.armed=true;toast("This answer is very short. Press again to move on anyway.");setTimeout(()=>skip.armed=false,3000);return}skip.armed=false;
+  STT.stop();if(phase==="fu")fuA[qi]=text;else ans[qi]=text;busy=true;
+  if(phase==="main"&&$("#fu",w).checked&&fuCount<3&&wc(text)>=8&&AI.pick()){micUI("think");$("#nq",w).disabled=true;bq.innerHTML=`<span class="muted">…</span>`;
+   try{const ctl=new AbortController();const r=await withTimeout(AI.json(followPrompt(set,set.qs[qi],text),ctl.signal),15000,ctl);if(ended)return;
+    const f=String(r&&r.followup||"").trim();const re=String(r&&r.reaction||"").trim()||REACT[qi%REACT.length];
+    if(f&&f.length>8&&f.length<240){fuQ[qi]=f;fuCount++;phase="fu";busy=false;render();speak(re+" "+f,listen);return}
+    busy=false;return next(re)}catch(e){if(ended)return}}
+  busy=false;next(REACT[(qi+fuCount)%REACT.length])}
+ function next(react){if(ended)return;phase="main";
+  if(qi<N-1){qi++;render();speak((react?react+" ":"")+(qi===N-1?"And my last question. ":"Next question. ")+set.qs[qi],listen);return}
+  finish()}
+ $("#startiv",w).onclick=()=>{TTS.stop();qi=0;phase="main";$("#ivopts",w).classList.add("small");render();speak("Let's begin. "+set.qs[0],listen)};
+ function finish(){ended=true;STT.stop();qt&&qt.stop();$$("#qd i",w).forEach(d=>d.className="ok");bq.textContent="Thank you, that's the end of the interview.";if(TTS.ok){av.classList.add("talk");TTS.say("Thank you, that's the end of the interview.",{rate:.97,onEnd:()=>av.classList.remove("talk")})}
+  const qs=set.qs.map((q,i)=>fuQ[i]?`${q} — Follow-up: ${fuQ[i]}`:q);const out=ans.map((a,i)=>fuQ[i]?`${a}\n\n[Answer to follow-up] ${fuA[i]||"(no answer)"}`:a);
+  if(exam){opts.onDone(out);return}
+  ia.innerHTML=`<button class="btn" type="button" id="redo">Start again</button>`;$("#redo",w).onclick=()=>rerender();
+  const s2=Object.assign({},set,{qs});const box=$("#sres",w);mark(box,{prompt:speakingPrompt(s2,out),render:r=>renderSpeaking(box,s2,out,r),offline:()=>offlineSpeaking(s2,out)})}
+ const obs=new MutationObserver(()=>{if(!w.isConnected){ended=true;STT.stop();obs.disconnect()}});obs.observe(document.getElementById("app"),{childList:true})};
+</script>
+<style>
+.ivopts{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;padding:12px;border-radius:14px;background:var(--surface-2)}
+.ivopts.small{padding:8px 12px}
+.micpanel{display:flex;align-items:center;gap:14px;padding:14px;border-radius:16px;border:1.5px solid var(--line);background:var(--surface);flex-wrap:wrap}
+.micpanel #qtm{margin-left:auto}
+.micpanel>.stack{flex:1 1 180px}
+.mic{flex:none;width:72px;height:72px;border-radius:50%;border:0;display:grid;place-items:center;cursor:pointer;color:var(--on-c);background:linear-gradient(135deg,var(--sp),var(--sp2,var(--sp)));box-shadow:0 10px 24px -12px var(--sp);transition:transform .2s,filter .2s;position:relative}
+.mic[data-s="off"],.mic[data-s="think"]{filter:grayscale(.75) opacity(.75)}
+.mic[data-s="talk"]{filter:grayscale(.9) opacity(.5)}
+.mic[data-s="on"]::before,.mic[data-s="on"]::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:3px solid var(--sp);animation:micpulse 1.4s ease-out infinite}
+.mic[data-s="on"]::after{animation-delay:.7s}
+@keyframes micpulse{from{transform:scale(.95);opacity:.8}to{transform:scale(1.35);opacity:0}}
+.typing .mic{display:none}
+#interim{font-style:italic;min-height:1.2em}
+.microw{display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap}
+.micbtn.rec{background:var(--sp);color:var(--on-c);border-color:transparent;animation:recblink 1.4s infinite}
+@keyframes recblink{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--sp) 25%,transparent)}}
+@media (prefers-reduced-motion:reduce){.mic[data-s="on"]::before,.mic[data-s="on"]::after,.micbtn.rec{animation:none}}
+@media (max-width:520px){.mic{width:60px;height:60px}.micpanel{padding:12px;gap:10px}.micpanel #qtm{margin-left:0}}
+</style>
+<script>
+/* ===== A–Z filter on every topic list ===== */
+filterBarHTML=function(total,noun){return `<nav class="azbar" id="faz" aria-label="Filter by first letter"></nav>
+ <div class="filterbar"><label class="sr" for="fq">Search</label><input type="search" id="fq" placeholder="Search ${total} ${noun}…" autocomplete="off"><label class="row note" style="gap:6px"><input type="checkbox" id="fnew"> Not attempted yet</label><button class="btn sm" type="button" id="frand">${ic("spark",14)} Pick one for me</button><a class="btn sm k-ac xlink" href="#explore">${ic("pen",14)} Your own topic</a><span class="count" id="fcount"></span></div><div class="nomatch" id="fnone" hidden>Nothing matches. Choose another letter, clear the search or untick the filter.</div>`};
+bindFilter=function(w,noun){const q=$("#fq",w),n=$("#fnew",w),c=$("#fcount",w),none=$("#fnone",w),az=$("#faz",w);const items=$$(".item",w);const key="filter."+curRoute();
+ const counts={};items.forEach(b=>{const l=vLetter(($("h4",b)||b).textContent);b.dataset.l=l;counts[l]=(counts[l]||0)+1});
+ const saved=store.get(key,null)||{};q.value=saved.t||"";n.checked=!!saved.n;let letter=saved.l||"ALL";if(letter!=="ALL"&&!counts[letter])letter="ALL";
+ const drawAZ=()=>{az.innerHTML=AZ.map(l=>`<button type="button" data-l="${l}" aria-pressed="${letter===l}" ${counts[l]?"":"disabled"} title="${counts[l]||0}">${l}</button>`).join("")+`<button type="button" class="azall" data-l="ALL" aria-pressed="${letter==="ALL"}">All</button>`;
+  $$("button",az).forEach(b=>b.onclick=()=>{letter=b.dataset.l;drawAZ();apply()})};
+ const apply=()=>{const t=q.value.toLowerCase().trim();let vis=0;items.forEach(b=>{const ok=(letter==="ALL"||b.dataset.l===letter)&&(!t||b.textContent.toLowerCase().includes(t))&&(!n.checked||!b.querySelector(".done"));b.hidden=!ok;if(ok)vis++});
+  $$("[data-group]",w).forEach(g=>g.hidden=!$$(".item",g).some(b=>!b.hidden));c.textContent=`${vis} ${noun}${letter==="ALL"?"":" · "+letter}`;none.hidden=vis>0;store.set(key,{t:q.value,n:n.checked,l:letter})};
+ drawAZ();q.oninput=apply;n.onchange=apply;$("#frand",w).onclick=()=>{const vis=items.filter(b=>!b.hidden);if(vis.length)vis[Math.floor(Math.random()*vis.length)].click()};
+ const xl=$(".xlink",w);if(xl)xl.addEventListener("click",()=>store.set("xskill",{writing:"writing",speaking:"speaking",reading:"reading",listening:"listening"}[curRoute()]||"writing"),true);
+ apply()};
+
+/* ===== Your own topics: created by you or the AI, saved on this device ===== */
+const XSK={writing:{name:"Writing",k:"wr",arr:()=>WRITING,ui:"writing"},speaking:{name:"Speaking",k:"sp",arr:()=>SPEAKING,ui:"speaking"},reading:{name:"Reading",k:"rd",arr:()=>READING,ui:"reading"},listening:{name:"Listening",k:"ls",arr:()=>LISTENING,ui:"listening"}};
+function customAll(){const c=store.get("custom",null);return c&&typeof c==="object"?c:{writing:[],speaking:[],reading:[],listening:[]}}
+function customSave(skill,item){const c=customAll();c[skill]=(c[skill]||[]).filter(x=>x.id!==item.id);c[skill].push(item);store.set("custom",c);const a=XSK[skill].arr();const i=a.findIndex(x=>x.id===item.id);if(i>=0)a[i]=item;else a.push(item)}
+function customDel(skill,id){const c=customAll();c[skill]=(c[skill]||[]).filter(x=>x.id!==id);store.set("custom",c);const a=XSK[skill].arr();const i=a.findIndex(x=>x.id===id);if(i>=0)a.splice(i,1)}
+(function(){const c=customAll();Object.keys(XSK).forEach(s=>(c[s]||[]).forEach(it=>{if(it&&it.id&&!XSK[s].arr().some(x=>x.id===it.id))XSK[s].arr().push(it)}))})();
+function openCustom(skill,id){navigate(XSK[skill].ui);UI[XSK[skill].ui]=id;rerender()}
+
+/* teacher topic bank */
+const XCATS=[["maths","Teaching Maths"],["ipt","Teaching IPT & computing"],["students","Students & wellbeing"],["duties","School duties & admin"],["parents","Parents & community"],["growth","Becoming a teacher"]];
+const XTOPICS=[
+ ["maths",["Teaching fractions with visual models","Common algebra mistakes","Financial maths: budgeting and loans","Statistics using real school data","Using Desmos and GeoGebra in class","Calculators in maths lessons","How much maths homework to set","Preparing students for NAPLAN numeracy","Teaching probability with games","Explaining reasoning in maths","Measurement lessons outdoors","Helping students with maths anxiety","Extension work for gifted students","Supporting students below grade level","Maths competitions and Maths Week","Worked examples and explicit teaching","Open-ended problem-solving tasks","Choosing HSC Mathematics Standard or Advanced","Graphs and data visualisation","Maths in everyday careers","Teaching geometry with technology","Mental maths strategies","Assessment tasks in mathematics","Using mini whiteboards for feedback"]],
+ ["ipt",["Teaching coding to beginners","Block coding or Python?","Cyber safety and passwords","Digital footprint and online privacy","Databases and SQL for students","How the internet and networks work","AI tools like ChatGPT in class","Academic integrity and AI","Starting a robotics club","Student app design projects","Spreadsheets for real problems","Building a school website","Ethics in information technology","Computer lab rules and equipment care","Bring your own device programs","Software projects and teamwork","Encouraging girls into computing","Gaming and screen time","Algorithms and flowcharts","Fixing common hardware problems","Cloud storage and backups","Social media and teenagers"]],
+ ["students",["Managing classroom behaviour","Students who refuse to work","Bullying and cyberbullying","Student mental health","Supporting EAL/D students","Adjustments for students with disability","Aboriginal and Torres Strait Islander students","Attendance and lateness","Mobile phones in class","Building rapport with students","Motivating disengaged students","Conflict during group work","Student leadership roles","Year 7 transition to high school","HSC stress and exam pressure","Study skills and organisation","Rewards and positive feedback","Listening to student voice","Students from refugee backgrounds","Classroom seating plans"]],
+ ["duties",["Playground duty","Planning an excursion","Risk assessments","Safety in the computer room","Writing student reports","Marking and feedback","Assessment schedules","Lesson planning and programming","Taking a casual relief class","Faculty meetings","Asking for faculty funding","Following school policies","Child protection and mandatory reporting","Lockdown and evacuation drills","Timetable problems","School sports carnival","Open night and enrolment","Ordering new equipment","Supervising exams","Recording student data"]],
+ ["parents",["Parent–teacher interviews","Emailing a parent about a concern","Writing for the school newsletter","Partnerships with local businesses","Inviting a guest speaker","Multicultural day","Parents helping with homework","Responding to a parent complaint","Careers night","Fundraising for new laptops","Community volunteering","Translating information for families"]],
+ ["growth",["Getting NESA accreditation","Working with a mentor teacher","Professional development courses","My practicum experience","Reflecting on a lesson","Teacher workload and wellbeing","Working with colleagues","Shortage of maths teachers","Feedback after a lesson observation","Using data to improve teaching","Teaching in rural and remote schools","Inclusive education","Why I want to be a teacher","My first year as a teacher","Learning from mistakes in teaching","Teaching in a multicultural school"]]];
+const XLIST=[];XTOPICS.forEach(([c,l])=>l.forEach(t=>XLIST.push({t,c})));
+
+const XCTX=`The candidate is a pre-service secondary Mathematics and IPT (Information Processes and Technology / computing) teacher in New South Wales, Australia, in the final semester of a Master of Teaching, preparing for the ISLPR test (needs Level 4 in every skill to register with NESA). Use Australian English and realistic NSW high school details (Years 7–12, faculties, head teachers, NESA, HSC, NAPLAN, practicum, parents and carers).`;
+const GENRE_OK=()=>Object.keys(GUIDES);
+function xPrompt(skill,topic,own,o){
+ if(skill==="writing")return `${XCTX}
+Create ONE ISLPR writing task about: "${topic}".${own?`\nThe candidate already has this task. Keep its wording as the "prompt" and build everything else around it:\n"""${own}"""`:""}${o.task?`\nIt must be Task ${o.task} (${o.task==1?"a short email or letter of about 150 words":"a longer piece of about 250 words: article, report, speech, proposal or program"}).`:""}${o.genre?`\nThe text type must be "${o.genre}".`:""}
+The candidate writes as a teacher or pre-service teacher in a realistic school situation.
+Return JSON exactly like this:
+{"task":1 or 2,"genre":"one of ${GENRE_OK().join(", ")}","title":"max 7 words","context":"one sentence that sets the scene","prompt":"the task instruction in 1–2 sentences, starting 'Write'","points":["three things the answer must include"],"words":150 or 250,"plan":[["Paragraph 1 label","what to write in it"],["…","…"]],"sample":"a complete model answer at ISLPR level 4+, about the word count, in the right format (greeting and sign-off for emails and letters; a title for articles, reports and speeches). Use \\n for new lines."}`;
+ if(skill==="speaking")return `${XCTX}
+Create an ISLPR speaking interview of 5 questions about: "${topic}". Question 1 is familiar and personal; question 2 is about the candidate's own teaching or practicum experience; question 3 asks for an opinion with reasons; question 4 is a realistic problem or situation at school ("What would you do if…"); question 5 is a broader question about education or society. Each question is one or two natural spoken sentences.
+Return JSON: {"title":"max 6 words","qs":["…","…","…","…","…"]}`;
+ const qp=`"questions":[{"q":"question","key":"short model answer","kw":["2–4 lowercase keywords from the answer"]}] (3 or 4 questions testing main ideas, details and inference),"points":[{"p":"key point a good summary must mention","kw":["2–3 lowercase keywords"]}] (exactly 4 points)`;
+ if(skill==="reading")return own?`${XCTX}
+The candidate wants to practise ISLPR reading with their own passage about "${topic}". Read it and write the comprehension task. Do NOT return the passage.
+"""${own}"""
+Return JSON: {"title":"max 6 words",${qp}}`:`${XCTX}
+Write an ISLPR reading passage about: "${topic}", in the style of a quality newspaper or education magazine article: 330–420 words in 4 or 5 paragraphs separated by \\n\\n, with a clear main idea, supporting details, at least one different viewpoint and a conclusion. Do not invent quotations from real people or exact statistics from real organisations.
+Return JSON: {"title":"max 6 words","text":"…",${qp}}`;
+ const L={short:"a short monologue of 80–120 words (a voicemail, announcement or quick message)",medium:"a conversation of 180–260 words between two people (A and B) at school",long:"a talk, briefing or interview of 350–450 words (speaker A, or A and B)"}[o.len||"medium"];
+ return own?`${XCTX}
+The candidate wants to practise ISLPR listening with their own script about "${topic}". The computer voice will read it once. Write the comprehension task. Do NOT return the script.
+"""${own}"""
+Return JSON: {"title":"max 6 words","setting":"who is speaking and where, max 8 words",${qp}}`:`${XCTX}
+Write an ISLPR listening script about: "${topic}": ${L}. Natural spoken English with some hesitation markers and specific details (times, places, numbers, reasons).
+Return JSON: {"title":"max 6 words","setting":"who is speaking and where, max 8 words","lines":[{"s":"A","t":"what speaker A says"},{"s":"B","t":"…"}],${qp}}`}
+const sArr=(a,n)=>Array.isArray(a)?a.map(x=>String(x||"").trim()).filter(Boolean).slice(0,n):[];
+const kwOf=s=>String(s).toLowerCase().replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(x=>x.length>4).slice(0,3);
+const normQ=a=>(Array.isArray(a)?a:[]).map(x=>Array.isArray(x)?{q:x[0],key:x[1],kw:x[2]}:x).filter(x=>x&&x.q).slice(0,4).map(x=>({q:String(x.q),key:String(x.key||""),kw:sArr(x.kw,4).map(k=>k.toLowerCase()).concat(sArr(x.kw,4).length?[]:kwOf(x.key||x.q))}));
+const normP=a=>(Array.isArray(a)?a:[]).map(x=>Array.isArray(x)?{p:x[0],kw:x[1]}:typeof x==="string"?{p:x}:x).filter(x=>x&&x.p).slice(0,5).map(x=>({p:String(x.p),kw:sArr(x.kw,3).map(k=>k.toLowerCase()).concat(sArr(x.kw,3).length?[]:kwOf(x.p))}));
+function xBuild(skill,r,topic,own,o){const id="u"+skill[0]+Date.now().toString(36);const title=String(r.title||topic).trim().slice(0,70)||topic;
+ if(skill==="writing"){let task=+r.task===2||+r.words>200?2:1;if(o.task)task=+o.task;let genre=o.genre||(GUIDES[r.genre]?r.genre:task===1?"formal-letter":"article");
+  const plan=(Array.isArray(r.plan)?r.plan:[]).map(x=>Array.isArray(x)?[String(x[0]),String(x[1]||"")]:x&&typeof x==="object"?[String(x.label||x.part||x[0]||""),String(x.content||x.text||"")]:null).filter(x=>x&&x[0]);
+  return {id,task,genre,title,context:String(r.context||"").trim(),prompt:own||String(r.prompt||("Write about "+topic+".")).trim(),points:sArr(r.points,5),words:task===1?150:250,plan:plan.length?plan:null,sample:r.sample?String(r.sample).replace(/\\n/g,"\n"):null,custom:true,topic}}
+ if(skill==="speaking")return {id,title,level:"Your topic",qs:sArr(r.qs,6),samples:{},custom:true,topic};
+ const questions=normQ(r.questions),points=normP(r.points);
+ if(skill==="reading")return {id,type:"summary",title,topic:"Your topic",text:own||String(r.text||"").replace(/\\n/g,"\n"),questions,points,custom:true};
+ const lines=own?own.split(/\n\s*\n|\n/).map(t=>t.trim()).filter(Boolean).map(t=>{const m=t.match(/^([AB])\s*[:\-]\s*(.+)$/);return m?{s:m[1],t:m[2]}:{s:"A",t}}):(Array.isArray(r.lines)?r.lines:[]).map(l=>({s:l.s==="B"?"B":"A",t:String(l.t||"")})).filter(l=>l.t);
+ const words=lines.reduce((a,l)=>a+wc(l.t),0);
+ return {id,len:o.len||(words<140?"short":words<300?"medium":"long"),title,setting:String(r.setting||"Your topic"),lines,questions,points,custom:true}}
+function xValid(skill,it){if(skill==="writing")return !!it.prompt;if(skill==="speaking")return it.qs.length>=3;if(skill==="reading")return wc(it.text)>=80&&it.questions.length>0;return it.lines.length>0&&it.questions.length>0}
+function xOfflineSpeaking(topic){const t=topic.replace(/\.$/,"");return {title:topic,qs:[`Let's talk about ${t.toLowerCase()}. What comes to mind when you think about this topic?`,`Have you seen or dealt with ${t.toLowerCase()} during your practicum or your own schooling? Tell me about it.`,`In your opinion, why is ${t.toLowerCase()} important for secondary school students? Give your reasons.`,`Imagine you are a new Maths or IPT teacher and you have a problem related to ${t.toLowerCase()}. What would you do?`,`How do you think ${t.toLowerCase()} will change in Australian schools over the next ten years?`]}}
+async function xCreate(skill,topic,own,o,box){topic=String(topic||"").trim();own=String(own||"").trim();
+ if(!topic&&own)topic=own.split(/\s+/).slice(0,6).join(" ");if(!topic){toast("Type a topic first, or choose one from the list.");return}
+ if(skill==="speaking"&&own){const qs=own.split(/\n+/).map(x=>x.replace(/^\s*(\d+[.)]|[-•*])\s*/,"").trim()).filter(x=>x.length>3);if(qs.length){const it=xBuild(skill,{title:topic,qs},topic,"",o);customSave(skill,it);openCustom(skill,it.id);return}}
+ if((skill==="reading"||skill==="listening")&&own&&wc(own)<40){toast("Paste at least 40 words, or leave the box empty and the AI will write one.");return}
+ const finish=r=>{const it=xBuild(skill,r||{},topic,skill==="writing"?own:own,o);if(!xValid(skill,it)){box.innerHTML=`<div class="callout k-sp">The AI's reply was incomplete. <button class="btn sm" type="button" id="xre">Try again</button></div>`;$("#xre",box).onclick=()=>xCreate(skill,topic,own,o,box);return}
+  customSave(skill,it);box.innerHTML="";openCustom(skill,it.id)};
+ const offline=skill==="speaking"?()=>xOfflineSpeaking(topic):skill==="writing"&&own?()=>({title:topic}):null;
+ await mark(box,{prompt:xPrompt(skill,topic,own,o),render:finish,offline,msgs:["Choosing a realistic school situation…","Writing your practice task…","Adding questions and key points…","Writing a sample answer…","Almost ready…"]})}
+
+VIEWS.explore=function(w){let skill=store.get("xskill","writing");if(!XSK[skill])skill="writing";const S=XSK[skill];let cat=store.get("xcat","all");let letter=store.get("xletter","ALL");
+ const c=customAll();const mine=Object.keys(XSK).flatMap(s=>(c[s]||[]).map(it=>({s,it}))).reverse();
+ const ownLbl={writing:"Already have a task? Paste it here (optional)",speaking:"Your own questions (optional, one per line)",reading:"Paste your own passage (optional, 80+ words)",listening:"Paste a script for the computer voice to read (optional). Start lines with A: or B: for two speakers."}[skill];
+ const ph={writing:"e.g. Asking the principal for new graphics calculators",speaking:"e.g. Using games to teach probability",reading:"e.g. Should schools ban AI chatbots?",listening:"e.g. A deputy principal explains the new phone rule"}[skill];
+ w.innerHTML=`<div class="phead k-${S.k}" style="margin-bottom:18px"><div><div class="k-bar"></div><h1>Any topic</h1><p>Practise <b>any</b> topic you like, not only the ones on this site. Type your own topic (or paste your own task, questions or passage), or explore ${XLIST.length} topics about teaching Maths and IPT and life as a secondary teacher. The AI writes the practice for you, then marks your answer the same way as every other task.</p></div></div>
+ <div class="tabs xsk" role="group" aria-label="Skill">${Object.keys(XSK).map(s=>`<button type="button" class="k-${XSK[s].k}" data-s="${s}" aria-pressed="${s===skill}">${esc(XSK[s].name)}</button>`).join("")}</div>
+ <div class="xgrid">
+  <div class="card pad stack k-${S.k}" id="xform"><h2>Your own topic</h2>
+   <div><label class="lbl" for="xt">Topic</label><input type="text" id="xt" placeholder="${esc(ph)}" autocomplete="off" value="${esc(store.get("xtopic",""))}"></div>
+   ${skill==="writing"?`<div class="row" style="gap:10px"><div style="flex:1 1 160px"><label class="lbl" for="xtask">Task</label><select id="xtask"><option value="">Let the AI choose</option><option value="1">Task 1 · email or letter (150 words)</option><option value="2">Task 2 · longer text (250 words)</option></select></div><div style="flex:1 1 160px"><label class="lbl" for="xgenre">Text type</label><select id="xgenre"><option value="">Let the AI choose</option>${Object.keys(GUIDES).map(g=>`<option value="${g}">${esc(GUIDES[g].name)}</option>`).join("")}</select></div></div>`:""}
+   ${skill==="listening"?`<div><label class="lbl" for="xlen">Length</label><select id="xlen"><option value="short">Short (about 1 minute)</option><option value="medium" selected>Medium (2 minutes)</option><option value="long">Long (3–4 minutes)</option></select></div>`:""}
+   <div><label class="lbl" for="xown">${esc(ownLbl)}</label><textarea id="xown" rows="${skill==="reading"||skill==="listening"?7:4}"></textarea></div>
+   <button class="btn primary" type="button" id="xgo">${ic("spark",16)} Create my ${esc(S.name.toLowerCase())} practice</button>
+   <p class="note">${skill==="speaking"?"If you type your own questions, the interview starts straight away. Otherwise the AI writes five questions on your topic.":"The AI usually takes 20–60 seconds to write the task. It is saved on this device under Your saved topics."}</p>
+   <div id="xbox"></div></div>
+  <div class="stack">
+   <div class="card pad stack"><h3>How it works</h3><ol class="xsteps"><li><b>Choose a skill</b> above: writing, speaking, reading or listening.</li><li><b>Type a topic</b> or tap one from the topic list below.</li><li><b>Practise</b> it like any other task. Speaking is a voice interview; listening is read aloud once.</li><li><b>Get AI marking</b>: your level, highlighted mistakes, tips and a better version.</li></ol></div>
+   <div class="card pad stack"><div class="row" style="justify-content:space-between"><h3>Your saved topics</h3><span class="chip line">${mine.length}</span></div>
+    ${mine.length?`<div class="xmine">${mine.slice(0,40).map(({s,it})=>`<div class="xrow k-${XSK[s].k}"><span class="chip">${XSK[s].name}</span><b>${esc(it.title)}</b><span class="row" style="gap:6px;flex-wrap:nowrap"><button class="btn sm" type="button" data-open="${s}:${it.id}">Open</button><button class="btn ghost sm" type="button" data-del="${s}:${it.id}" aria-label="Delete ${esc(it.title)}">Delete</button></span></div>`).join("")}</div>`:`<p class="note">Nothing yet. Topics you create appear here and also in the ${esc(S.name)} list.</p>`}</div>
+  </div>
+ </div>
+ <h2 style="margin:30px 0 6px">Explore teacher topics</h2><p class="note" style="margin-bottom:12px">Tap a topic to create a <b>${esc(S.name.toLowerCase())}</b> practice on it. Change the skill at the top to practise the same topic another way.</p>
+ <div class="row xcats" style="gap:6px;margin-bottom:12px"><button type="button" class="chip xcat" data-c="all" aria-pressed="${cat==="all"}">All topics</button>${XCATS.map(([k,n])=>`<button type="button" class="chip xcat" data-c="${k}" aria-pressed="${cat===k}">${esc(n)}</button>`).join("")}</div>
+ <nav class="azbar" id="xaz" aria-label="Filter topics by first letter"></nav>
+ <div class="filterbar"><label class="sr" for="xq">Search topics</label><input type="search" id="xq" placeholder="Search topics…" autocomplete="off"><span class="count" id="xcount"></span></div>
+ <div class="xtopics k-${S.k}" id="xtl"></div><div class="nomatch" id="xnone" hidden>No topics match. Type it as your own topic above instead.</div>`;
+ $$(".xsk button",w).forEach(b=>b.onclick=()=>{store.set("xskill",b.dataset.s);store.set("xtopic",$("#xt",w).value);rerender()});
+ $("#xt",w).oninput=e=>store.set("xtopic",e.target.value);
+ const box=$("#xbox",w);const opts=()=>({task:$("#xtask",w)?$("#xtask",w).value:"",genre:$("#xgenre",w)?$("#xgenre",w).value:"",len:$("#xlen",w)?$("#xlen",w).value:""});
+ $("#xgo",w).onclick=()=>xCreate(skill,$("#xt",w).value,$("#xown",w).value,opts(),box);
+ $$("[data-open]",w).forEach(b=>b.onclick=()=>{const [s,id]=b.dataset.open.split(":");openCustom(s,id)});
+ $$("[data-del]",w).forEach(b=>{let armed=false;b.onclick=()=>{if(!armed){armed=true;b.textContent="Sure?";setTimeout(()=>{armed=false;b.textContent="Delete"},3000);return}const [s,id]=b.dataset.del.split(":");customDel(s,id);toast("Deleted");rerender()}});
+ $$(".xcat",w).forEach(b=>b.onclick=()=>{cat=b.dataset.c;store.set("xcat",cat);$$(".xcat",w).forEach(x=>x.setAttribute("aria-pressed",String(x===b)));draw()});
+ const q=$("#xq",w),az=$("#xaz",w),tl=$("#xtl",w);q.oninput=draw;
+ function draw(){const pool=XLIST.filter(x=>cat==="all"||x.c===cat);const counts={};pool.forEach(x=>{const l=vLetter(x.t);counts[l]=(counts[l]||0)+1});if(letter!=="ALL"&&!counts[letter])letter="ALL";
+  az.innerHTML=AZ.map(l=>`<button type="button" data-l="${l}" aria-pressed="${letter===l}" ${counts[l]?"":"disabled"}>${l}</button>`).join("")+`<button type="button" class="azall" data-l="ALL" aria-pressed="${letter==="ALL"}">All</button>`;
+  $$("button",az).forEach(b=>b.onclick=()=>{letter=b.dataset.l;store.set("xletter",letter);draw()});
+  const t=q.value.toLowerCase().trim();const list=pool.filter(x=>(letter==="ALL"||vLetter(x.t)===letter)&&(!t||x.t.toLowerCase().includes(t))).sort((a,b)=>a.t.localeCompare(b.t));
+  tl.innerHTML=list.map(x=>`<button type="button" class="xtopic" data-t="${esc(x.t)}"><span class="eyebrow">${esc(XCATS.find(c=>c[0]===x.c)[1])}</span><span>${esc(x.t)}</span></button>`).join("");
+  $("#xcount",w).textContent=list.length+" topics";$("#xnone",w).hidden=list.length>0;
+  $$(".xtopic",tl).forEach(b=>b.onclick=()=>{$("#xt",w).value=b.dataset.t;store.set("xtopic",b.dataset.t);$("#xown",w).value="";$("#xform",w).scrollIntoView({behavior:"smooth",block:"start"});xCreate(skill,b.dataset.t,"",opts(),box)})}
+ draw()};
+</script>
+<style>
+.xsk{margin-bottom:16px}
+.xsk button[aria-pressed="true"]{background:linear-gradient(135deg,var(--c),var(--c2));color:var(--on-c)}
+.xgrid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px;align-items:start}
+.xgrid input[type=text],.xgrid select,.xgrid textarea{width:100%}
+.xsteps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.xmine{display:flex;flex-direction:column;gap:8px;max-height:360px;overflow:auto}
+.xrow{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:var(--surface-2);flex-wrap:wrap}
+.xrow b{flex:1 1 140px;min-width:0}
+.xcats .chip{cursor:pointer;border:1px solid var(--line)}
+.xcats .chip[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.xtopics{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:10px}
+.xtopic{display:flex;flex-direction:column;gap:4px;text-align:left;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-weight:700;cursor:pointer;transition:transform .15s,border-color .2s,box-shadow .2s}
+.xtopic:hover{transform:translateY(-2px);border-color:var(--c);box-shadow:var(--shadow)}
+.xtopic .eyebrow{font-size:.68rem}
+.filterbar .xlink{text-decoration:none}
+@media (max-width:860px){.xgrid{grid-template-columns:1fr}}
+</style>
+<script>
 /* ================= START ================= */
 go();
 </script>
