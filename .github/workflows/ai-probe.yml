@@ -1,0 +1,37 @@
+name: ai-probe
+on:
+  push:
+    branches: [ai-probe]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe keyless AI endpoints
+        shell: bash
+        run: |
+          ORIGIN="https://mamunbracu.github.io"
+          PROMPT='Reply with only this JSON: {\"ok\":true,\"word\":\"hello\"}'
+          probe () {
+            name="$1"; url="$2"; model="$3"; auth="$4"
+            echo "=================== $name | $model"
+            echo "--- preflight"
+            curl -s -o /dev/null -D - -m 20 -X OPTIONS "$url" -H "Origin: $ORIGIN" -H "Access-Control-Request-Method: POST" -H "Access-Control-Request-Headers: content-type${auth:+,authorization}" | grep -iE "^HTTP|access-control-allow-(origin|headers|methods)" || echo "(no response)"
+            echo "--- request"
+            start=$(date +%s)
+            if [ -n "$auth" ]; then AH=(-H "Authorization: Bearer $auth"); else AH=(); fi
+            out=$(curl -s -m 90 -D /tmp/h -X POST "$url" -H "Origin: $ORIGIN" -H "content-type: application/json" "${AH[@]}" -d "{\"model\":\"$model\",\"messages\":[{\"role\":\"user\",\"content\":\"$PROMPT\"}],\"temperature\":0.3}")
+            echo "status: $(head -1 /tmp/h | tr -d '\r')  time: $(( $(date +%s)-start ))s  acao: $(grep -i '^access-control-allow-origin' /tmp/h | tr -d '\r')"
+            echo "$out" | head -c 600; echo
+          }
+          probe "KILO" "https://ai-gateway.kilo.ai/api/v1/chat/completions" "kilo-auto/free" ""
+          probe "OVH" "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions" "gpt-oss-120b" ""
+          probe "OVH" "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions" "Meta-Llama-3_3-70B-Instruct" ""
+          probe "POLLINATIONS" "https://text.pollinations.ai/openai" "openai" ""
+          probe "POLLINATIONS-GEN" "https://gen.pollinations.ai/v1/chat/completions" "openai" ""
+          probe "LLM7" "https://api.llm7.io/v1/chat/completions" "gpt-4.1-nano" ""
+          probe "AIHORDE" "https://oai.aihorde.net/v1/chat/completions" "auto" "0000000000"
+          echo "=================== model lists"
+          curl -s -m 20 https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/models | head -c 1500; echo
+          curl -s -m 20 https://ai-gateway.kilo.ai/api/v1/models | grep -o '"id":"[^"]*free[^"]*"' | head -20
+          curl -s -m 20 https://text.pollinations.ai/models | head -c 800; echo
+          curl -s -m 20 https://api.llm7.io/v1/models | head -c 800; echo
