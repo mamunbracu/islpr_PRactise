@@ -1,0 +1,17 @@
+You are an ISLPR speaking examiner. Below is an interview on the topic "You and your background". The candidate's spoken answers were transcribed by dictation or typing, so ignore capitalisation and punctuation, and do not assess pronunciation (state that it was not assessed). Judge spoken-language qualities from the transcript: fluency and coherence (ability to extend answers, logical flow, fillers, repetition, false starts), vocabulary range and idiom, grammatical accuracy, and communication (relevance, clarity, answering the actual question).
+ISLPR scale (low→high): 0, 0+, 1-, 1, 1+, 2, 2+, 3, 3+, 4, 4+, 5. Level 4 = vocational: fluent and accurate for professional use with minor errors; 4+ = advanced vocational; 3 = basic vocational with clear but limited, uneven language; 2 = basic social. Be calibrated and honest: do not inflate. Short or off-task responses cannot score above 2+.
+Q1: Could you tell me a little about yourself?
+A1: <<<I am Sam, I come from Bangladesh, I am study teaching.>>>
+Q2: Where did you grow up, and what was it like?
+A2: <<<I grow up in Dhaka, it is very busy city with many people and traffic.>>>
+Q3: What made you decide to come to Australia?
+A3: <<<Because I want better future and study opportunity.>>>
+Q4: How do you usually spend your weekends?
+A4: <<<I usually work and sometime go to the beach with friends.>>>
+Q5: What's something you're looking forward to in the next few months?
+A5: <<<I am looking forward to finish my degree.>>>
+Reply with only JSON:
+{"level":"3+","summary":"2-3 sentences addressed to 'you'; mention pronunciation was not assessed","criteria":[{"name":"Fluency","level":"","comment":""},{"name":"Vocabulary","level":"","comment":""},{"name":"Accuracy","level":"","comment":""},{"name":"Communication","level":"","comment":""}],"answers":[{"feedback":"1-2 specific sentences on this answer","errors":[{"original":"exact short span (1-8 words) copied character-for-character from the the candidate answer this item describes","correction":"corrected span","type":"grammar|spelling|punctuation|vocabulary|tone|organisation","explanation":"one short reason"}],"better":"a natural spoken 4+ answer using the candidate's ideas, 60-90 words"}],"tips":["4-6 specific speaking tips"],"phrases":["6-8 useful natural expressions for this topic"]}
+The answers array must have exactly 5 items in order.
+
+Reply with only the JSON object, no other text.

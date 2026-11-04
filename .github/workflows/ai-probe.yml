@@ -6,32 +6,49 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe keyless AI endpoints
+      - uses: actions/checkout@v4
+        with: { ref: ai-probe }
+      - name: Real marking requests
         shell: bash
         run: |
-          ORIGIN="https://mamunbracu.github.io"
-          PROMPT='Reply with only this JSON: {\"ok\":true,\"word\":\"hello\"}'
-          probe () {
-            name="$1"; url="$2"; model="$3"; auth="$4"
-            echo "=================== $name | $model"
-            echo "--- preflight"
-            curl -s -o /dev/null -D - -m 20 -X OPTIONS "$url" -H "Origin: $ORIGIN" -H "Access-Control-Request-Method: POST" -H "Access-Control-Request-Headers: content-type${auth:+,authorization}" | grep -iE "^HTTP|access-control-allow-(origin|headers|methods)" || echo "(no response)"
-            echo "--- request"
-            start=$(date +%s)
-            if [ -n "$auth" ]; then AH=(-H "Authorization: Bearer $auth"); else AH=(); fi
-            out=$(curl -s -m 90 -D /tmp/h -X POST "$url" -H "Origin: $ORIGIN" -H "content-type: application/json" "${AH[@]}" -d "{\"model\":\"$model\",\"messages\":[{\"role\":\"user\",\"content\":\"$PROMPT\"}],\"temperature\":0.3}")
-            echo "status: $(head -1 /tmp/h | tr -d '\r')  time: $(( $(date +%s)-start ))s  acao: $(grep -i '^access-control-allow-origin' /tmp/h | tr -d '\r')"
-            echo "$out" | head -c 600; echo
-          }
-          probe "KILO" "https://ai-gateway.kilo.ai/api/v1/chat/completions" "kilo-auto/free" ""
-          probe "OVH" "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions" "gpt-oss-120b" ""
-          probe "OVH" "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions" "Meta-Llama-3_3-70B-Instruct" ""
-          probe "POLLINATIONS" "https://text.pollinations.ai/openai" "openai" ""
-          probe "POLLINATIONS-GEN" "https://gen.pollinations.ai/v1/chat/completions" "openai" ""
-          probe "LLM7" "https://api.llm7.io/v1/chat/completions" "gpt-4.1-nano" ""
-          probe "AIHORDE" "https://oai.aihorde.net/v1/chat/completions" "auto" "0000000000"
-          echo "=================== model lists"
-          curl -s -m 20 https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/models | head -c 1500; echo
-          curl -s -m 20 https://ai-gateway.kilo.ai/api/v1/models | grep -o '"id":"[^"]*free[^"]*"' | head -20
-          curl -s -m 20 https://text.pollinations.ai/models | head -c 800; echo
-          curl -s -m 20 https://api.llm7.io/v1/models | head -c 800; echo
+          python3 - <<'PY'
+          import json, time, urllib.request, urllib.error
+          def call(url, model, prompt, extra=None):
+              body = {"model": model, "messages": [{"role": "user", "content": prompt}], "temperature": 0.4}
+              if extra: body.update(extra)
+              req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"content-type": "application/json", "Origin": "https://mamunbracu.github.io"})
+              t = time.time()
+              try:
+                  with urllib.request.urlopen(req, timeout=180) as r:
+                      d = json.load(r); hdr = dict(r.headers)
+                  txt = d["choices"][0]["message"].get("content") or ""
+                  s = txt.find("{"); e = txt.rfind("}")
+                  try:
+                      j = json.loads(txt[s:e+1]); ok = True
+                  except Exception as ex:
+                      j = {}; ok = False
+                  keys = list(j.keys())
+                  print(f"  {model:32s} {time.time()-t:5.1f}s  JSON ok={ok}  level={j.get('level')}  errors={len(j.get('errors',[]) or j.get('answers',[]))}  keys={keys[:8]}  usage={d.get('usage',{}).get('total_tokens')}  rl={ {k:v for k,v in hdr.items() if 'ratelimit' in k.lower() or k.lower()=='retry-after'} }")
+                  if j.get("errors"): print("     sample error:", json.dumps(j["errors"][0])[:220])
+                  if j.get("summary"): print("     summary:", j["summary"][:200])
+              except urllib.error.HTTPError as ex:
+                  print(f"  {model:32s} {time.time()-t:5.1f}s  HTTP {ex.code}  headers={ {k:v for k,v in ex.headers.items() if 'rate' in k.lower() or 'retry' in k.lower()} }  body={ex.read()[:300]}")
+              except Exception as ex:
+                  print(f"  {model:32s} {time.time()-t:5.1f}s  ERROR {ex}")
+          W = open("probe_writing.txt").read(); S = open("probe_speaking.txt").read()
+          OVH = "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions"
+          POL = "https://text.pollinations.ai/openai"
+          print("== OVH list of chat models")
+          d = json.load(urllib.request.urlopen("https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/models", timeout=30))
+          print("  ", [m["id"] for m in d["data"] if m.get("context_length", 0) >= 16000])
+          print("== WRITING marking")
+          for m in ["gpt-oss-120b", "Meta-Llama-3_3-70B-Instruct", "Qwen3.8-27B", "Mistral-Small-3.2-24B-Instruct-2506"]:
+              call(OVH, m, W, {"max_tokens": 8000})
+          call(POL, "openai", W)
+          print("== SPEAKING marking")
+          call(OVH, "gpt-oss-120b", S, {"max_tokens": 8000})
+          call(POL, "openai", S)
+          print("== RATE LIMIT burst on gpt-oss-120b (4 quick small calls)")
+          for i in range(4):
+              call(OVH, "gpt-oss-120b", 'Reply with only {"ok":true}', {"max_tokens": 200})
+          PY
