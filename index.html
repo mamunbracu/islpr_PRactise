@@ -1058,8 +1058,12 @@ const PROVIDERS={
  anthropic:{name:"Claude API (Anthropic)",short:"Claude API",free:false,prefix:"sk-ant-",def:"claude-sonnet-5-5"},
  proxy:{name:"Group server",short:"group server",free:null}
 };
+/* ===== Built-in marking server =====
+   Put your Cloudflare Worker address here and every visitor is marked automatically, with nothing to set up.
+   Never put an API key here: this file is public. The key lives only on the Worker. */
+const SITE_CONFIG={server:"",passcode:""};
 const AUTO_ORDER=["claude","gemini","openrouter","anthropic","proxy"];
-function getCfg(){const raw=store.get("ai",{})||{};const c={mode:raw.mode||"auto",keys:Object.assign({},raw.keys||{}),models:Object.assign({},raw.models||{}),proxy:raw.proxy||"",code:raw.code||"",gemWorks:raw.gemWorks||""};
+function getCfg(){const raw=store.get("ai",{})||{};const c={mode:raw.mode||"auto",keys:Object.assign({},raw.keys||{}),models:Object.assign({},raw.models||{}),proxy:raw.proxy||SITE_CONFIG.server||"",code:raw.proxy?(raw.code||""):(SITE_CONFIG.passcode||""),builtIn:!raw.proxy&&!!SITE_CONFIG.server,gemWorks:raw.gemWorks||""};
  if(raw.key&&!c.keys.anthropic)c.keys.anthropic=raw.key;if(raw.model&&!c.models.anthropic)c.models.anthropic=raw.model;return c}
 function parseJSONLoose(t){t=String(t||"").trim();try{return JSON.parse(t)}catch(e){}const f=t.match(/```(?:json)?\s*([\s\S]*?)```/);if(f){try{return JSON.parse(f[1])}catch(e){}}const a=t.indexOf("{"),b=t.lastIndexOf("}");if(a>=0&&b>a){try{return JSON.parse(t.slice(a,b+1))}catch(e){}}throw{code:"invalid_json"}}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -1093,9 +1097,9 @@ async function listModels(p,signal){const c=getCfg();if(p==="gemini")return gemi
 const AI={fn:null,state:"connecting",
  async init(){try{if(window.claude&&typeof claude.use==="function")this.fn=await claude.use("sample")}catch(e){this.fn=null}this.refresh()},
  usable(p,c){c=c||getCfg();if(p==="groq")return false;if(p==="claude")return !!this.fn;if(p==="proxy")return !!c.proxy;return !!c.keys[p]},
- pick(){const c=getCfg();if(c.mode!=="auto")return this.usable(c.mode,c)?c.mode:null;return AUTO_ORDER.find(p=>this.usable(p,c))||null},
- label(p){return p?PROVIDERS[p].name:"not connected"},
- refresh(){const p=this.pick();this.state=p?"on":"off";const el=$("#aiChip");if(!el)return;el.className="ai-chip "+(p?"on":"off");el.querySelector("span").textContent=p?"AI: "+PROVIDERS[p].short:"Set up AI marking";el.title=p?"AI marking connected via "+this.label(p):"AI marking is not connected. Tap to set it up."},
+ pick(){const c=getCfg();if(c.mode!=="auto")return this.usable(c.mode,c)?c.mode:null;const order=c.builtIn?["claude","proxy",...AUTO_ORDER.filter(x=>x!=="claude"&&x!=="proxy")]:AUTO_ORDER;return order.find(p=>this.usable(p,c))||null},
+ label(p){if(p==="proxy"&&getCfg().builtIn)return "the site's built-in Claude marking";return p?PROVIDERS[p].name:"not connected"},
+ refresh(){const p=this.pick();this.state=p?"on":"off";const el=$("#aiChip");if(!el)return;el.className="ai-chip "+(p?"on":"off");el.querySelector("span").textContent=p?"AI: "+(p==="proxy"&&getCfg().builtIn?"Claude ✓":PROVIDERS[p].short):"Set up AI marking";el.title=p?"AI marking connected via "+this.label(p):"AI marking is not connected. Tap to set it up."},
  set(st){if(st==="off"&&this.pick()==="claude")this.fn=null;this.refresh()},
  async json(prompt,signal){await this.ready;const p=this.pick();if(!p)throw{code:"unavailable"};
   if(p==="claude")return this.fn.json(prompt,{signal,modelTier:"default"});
@@ -2218,9 +2222,9 @@ function vocabQuiz(body,pool){if(pool.length<4){body.innerHTML=`<div class="empt
 </style>
 <script type="text/plain" id="workerCode">// ISLPR Prep Studio: group AI server (Cloudflare Worker, free plan)
 // Add these in the Worker's Settings → Variables and Secrets:
-//   GEMINI_API_KEY  (Secret) a free Google AI Studio key   ← recommended, free
-//   or GROQ_API_KEY (Secret) a free Groq key
-//   or ANTHROPIC_API_KEY (Secret) a paid Claude API key
+//   ANTHROPIC_API_KEY (Secret) your Claude API key  ← used first if set
+//   or GEMINI_API_KEY (Secret) a free Google AI Studio key
+//   or GROQ_API_KEY   (Secret) a free Groq key
 //   GROUP_CODE      (Secret) a passcode you share with friends
 //   ALLOWED_ORIGINS your site address, e.g. https://yourname.github.io
 export default {
@@ -2248,6 +2252,16 @@ export default {
     if (!prompt) return fail(400, "No prompt");
 
     try {
+      if (env.ANTHROPIC_API_KEY) {
+        const r = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
+          body: JSON.stringify({ model: env.ANTHROPIC_MODEL || "claude-sonnet-5-5", max_tokens: 8000, messages: [{ role: "user", content: prompt }] })
+        });
+        const d = await r.json();
+        if (!r.ok) return fail(r.status, (d.error && d.error.message) || "Claude API error");
+        return json(200, { text: (d.content || []).filter(b => b.type === "text").map(b => b.text).join("") });
+      }
       if (env.GEMINI_API_KEY) {
         const key = env.GEMINI_API_KEY;
         let model = env.GEMINI_MODEL;
@@ -2276,16 +2290,6 @@ export default {
         const d = await r.json();
         if (!r.ok) return fail(r.status, (d.error && d.error.message) || "Groq error");
         return json(200, { text: d.choices[0].message.content || "" });
-      }
-      if (env.ANTHROPIC_API_KEY) {
-        const r = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: { "content-type": "application/json", "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
-          body: JSON.stringify({ model: env.ANTHROPIC_MODEL || "claude-sonnet-5-5", max_tokens: 6000, messages: [{ role: "user", content: prompt }] })
-        });
-        const d = await r.json();
-        if (!r.ok) return fail(r.status, (d.error && d.error.message) || "Claude API error");
-        return json(200, { text: (d.content || []).filter(b => b.type === "text").map(b => b.text).join("") });
       }
       return fail(500, "No API key is set on the server");
     } catch (e) {
@@ -2340,6 +2344,7 @@ function providerCardHTML(p,c,active){const g=KEY_GUIDES[p];const model=c.models
 VIEWS.connect=function(w){const c=getCfg();const active=AI.pick();const inClaude=!!window.claude;
  w.innerHTML=`<div class="phead k-ac" style="margin-bottom:18px"><div><div class="k-bar"></div><h1>AI marking setup</h1><p>Connect an AI service once on each device. Every answer is then marked live with a level, highlighted errors, tips and model answers. Google Gemini and Groq are free.</p></div></div>
  <div class="card pad stack" style="margin-bottom:18px"><div class="row" style="justify-content:space-between"><div><span class="eyebrow">Status on this device</span><h3 id="cstat"></h3></div><div class="row"><label class="sr" for="amode">Which service to use</label><select id="amode"><option value="auto">Use the first available</option>${["claude","gemini","openrouter","anthropic","proxy"].map(p=>`<option value="${p}" ${c.mode===p?"selected":""}>Always use ${esc(PROVIDERS[p].name)}</option>`).join("")}</select><button class="btn primary k-ac" type="button" id="ctest">Test connection</button></div></div><div id="ctres"></div>
+  ${c.builtIn?`<div class="okmsg"><b>Built-in Claude marking is switched on for this site.</b> Every visitor is marked by Claude automatically. Nobody needs a key, and there's nothing to set up. The options below are only needed if you want to use your own key instead.</div>`:""}
   ${inClaude?`<div class="callout k-ac"><b>You're inside the Claude app.</b> Here the site marks with Claude, using your Claude plan's normal usage allowance (no API key needed). On your own website, such as GitHub Pages, use a free Gemini or Groq key below.</div>`:""}</div>
  <div class="card pad stack" style="margin-bottom:18px"><h3>Which option should I choose?</h3><div class="tscroll"><table class="ltable cmp-table"><thead><tr><th>Service</th><th>Cost</th><th>Daily use</th><th>Quality of marking</th></tr></thead><tbody>
   <tr><td class="first">Google Gemini</td><td>Free</td><td>Plenty for daily practice</td><td>Very good · recommended</td></tr>
