@@ -4035,6 +4035,68 @@ const MPOOL={};
 const mById=(arr,id)=>byId(arr,id)||MPOOL[id];
 </script>
 <script>
+/* ===== Reading, Listening, Writing organised by the ISLPR question pattern ===== */
+function patternTabsHTML(steps,active,k){return `<div class="ptabs k-${k}" role="tablist">${steps.map((s,i)=>`<button type="button" role="tab" data-p="${s.key}" aria-selected="${s.key===active}"><span class="pnum">${s.num}</span><span class="ptxt"><b>${s.label}</b><span>${s.sub}</span></span><span class="pcount">${s.count}</span></button>`).join("")}</div>`}
+function howHTML(title,rows,k){return `<div class="card pad stack k-${k} howcard"><h3>${title}</h3><div class="grid g3">${rows.map(([a,b])=>`<div class="callout"><b>${a}.</b> ${b}</div>`).join("")}</div></div>`}
+
+listReading=function(w){const tab=store.get("rtab","summary")==="aloud"?"aloud":"summary";
+ const sum=READING.filter(r=>r.type==="summary"),al=READING.filter(r=>r.type==="aloud");const pool=tab==="aloud"?al:sum;
+ const card=r=>{const b=bestFor(r.id);return `<button class="item" type="button" data-id="${r.id}">${b?`<span class="done">${esc(b)}</span>`:""}<span class="meta"><span class="chip">${esc(r.topic)}</span><span class="chip line">${wc(r.text)} words</span></span><h4>${esc(r.title)}</h4><span class="note">${esc(r.text.slice(0,110))}…</span></button>`};
+ w.innerHTML=`<div class="phead k-rd"><div><div class="k-bar"></div><h1>Reading</h1><p>The ISLPR reading test has <b>three passages</b>. Passages 1 and 2: read silently, give a spoken summary, then answer the examiner's questions. Passage 3: read aloud. Choose the part you want to practise.</p></div></div>
+ ${strategyBannerHTML("reading")}
+ ${patternTabsHTML([{key:"summary",num:"1–2",label:"Summary &amp; questions",sub:"Read silently → summarise → answer questions",count:sum.length},{key:"aloud",num:"3",label:"Read aloud",sub:"Read the passage aloud clearly and fluently",count:al.length}],tab,"rd")}
+ ${tab==="summary"?howHTML("Passages 1 and 2: how to do it",[["Read","Read the whole passage once for the main idea, then again for each paragraph's key point."],["Summarise","Start with a topic sentence, give each main point in one sentence, in your own words. Skip small details."],["Answer","Listen to each question, find the part of the text it refers to, and answer in a full sentence with a reason."]],"rd"):howHTML("Passage 3: how to read aloud",[["Prepare","Look through the passage first. Find long words, numbers and names, and say them quietly to yourself."],["Phrase","Pause at commas and full stops. Group words into meaningful chunks instead of reading word by word."],["Deliver","Speak at a steady pace, stress key words and let your voice fall at the end of each sentence."]],"rd")}
+ ${filterBarHTML(pool.length,"passages")}<div class="items k-rd stagger">${pool.map(card).join("")}</div>`;
+ $$(".ptabs button",w).forEach(b=>b.onclick=()=>{store.set("rtab",b.dataset.p);rerender()});
+ $$(".item",w).forEach(b=>b.onclick=()=>{UI.reading=b.dataset.id;rerender()});bindFilter(w,"passages")};
+
+const LS_PAT={short:{num:"1",label:"Clip 1 · Short",sub:"About 1 minute: a message, announcement or voicemail",how:[["Before","Read the setting. Ask: who is speaking, to whom, and why?"],["During","Note numbers, times, dates, places and what the listener must do."],["After","Summarise in 2–3 sentences: purpose, key details, action needed. Then answer."]]},
+ medium:{num:"2",label:"Clip 2 · Medium",sub:"About 2 minutes: a conversation between two people",how:[["Before","Predict the situation from the setting: a problem, a plan or a decision?"],["During","Note each speaker's view, the problem, suggestions and the final decision."],["After","Summarise: what they discussed, the different opinions, and what they agreed."]]},
+ long:{num:"3",label:"Clip 3 · Long",sub:"3–4 minutes: a talk, lecture or interview",how:[["Before","Expect an introduction, several main points and a conclusion."],["During","Listen for signposts: firstly, another reason, however, finally. Note one word per main point."],["After","Summarise the speaker's purpose and main points in order. Answer with details from your notes."]]}};
+listListening=function(w){const vs=TTS.sorted();let tab=store.get("ltab","short");if(!LS_PAT[tab])tab="short";const P=LS_PAT[tab];const pool=LISTENING.filter(l=>l.len===tab);
+ w.innerHTML=`<div class="phead k-ls"><div><div class="k-bar"></div><h1>Listening</h1><p>The ISLPR listening test has <b>three clips</b>, each longer than the last and each played <b>once</b>. After each clip you give a spoken summary and answer questions. Choose the clip type you want to practise.</p></div>
+  ${TTS.ok&&vs.length>1?`<div><label class="lbl" for="vsel">Voice</label><select id="vsel">${vs.map(v=>`<option value="${esc(v.name)}" ${store.get("voice","")===v.name?"selected":""}>${esc(v.name)} (${esc(v.lang)})</option>`).join("")}</select></div>`:""}</div>
+ ${strategyBannerHTML("listening")}
+ ${TTS.ok?"":`<div class="callout k-sp" style="margin-bottom:18px"><b>Audio isn't available in this browser.</b> You can still practise: each clip offers a timed read-once mode instead.</div>`}
+ ${patternTabsHTML(["short","medium","long"].map(k=>({key:k,num:LS_PAT[k].num,label:LS_PAT[k].label,sub:LS_PAT[k].sub,count:LISTENING.filter(l=>l.len===k).length})),tab,"ls")}
+ ${howHTML(`${P.label}: how to do it`,P.how,"ls")}
+ ${filterBarHTML(pool.length,"clips")}<div class="items k-ls stagger">${pool.map(l=>{const b=bestFor(l.id);const n=wc(l.lines.map(x=>x.t).join(" "));return `<button class="item" type="button" data-id="${l.id}">${b?`<span class="done">${esc(b)}</span>`:""}<span class="meta"><span class="chip">${esc(l.setting)}</span><span class="chip line">~${fmt(n/2.6)}</span>${new Set(l.lines.map(x=>x.s)).size>1?'<span class="chip line">2 speakers</span>':""}</span><h4>${esc(l.title)}</h4></button>`}).join("")}</div>`;
+ const vsel=$("#vsel",w);if(vsel)vsel.onchange=()=>{store.set("voice",vsel.value);TTS.say("This is the voice you'll hear in the clips.")};
+ $$(".ptabs button",w).forEach(b=>b.onclick=()=>{store.set("ltab",b.dataset.p);rerender()});
+ $$(".item",w).forEach(b=>b.onclick=()=>{UI.listening=b.dataset.id;rerender()});bindFilter(w,"clips")};
+
+const WR_PAT={1:{label:"Task 1 · Short task",sub:"Email or letter · about 150 words · about 20 minutes",how:[["Read the task","Who are you writing to? Formal (principal, parent, company) or semi-formal (colleague)? What must you include?"],["Plan","One paragraph per dot point: purpose → details → request or action → polite close."],["Check","Greeting and sign-off match the reader. Every dot point covered. No contractions in formal letters."]]},
+ 2:{label:"Task 2 · Extended task",sub:"Article, report, speech, proposal or program · about 250 words · about 40 minutes",how:[["Read the task","Identify the text type and audience: a report needs headings, a speech needs a greeting, an article needs a title."],["Plan","Introduction, 2–3 body paragraphs (main idea → reason → example), conclusion or recommendations."],["Check","Format suits the text type. Clear topic sentences. Linking words. Leave 5 minutes to proofread."]]}};
+listWriting=function(w){let tab=+store.get("wtab",1);if(tab!==2)tab=1;const P=WR_PAT[tab];const inTab=WRITING.filter(t=>t.task===tab);
+ const genres=[...new Set(inTab.map(t=>t.genre))].filter(g=>GUIDES[g]);let g=store.get("wgenre"+tab,"all");if(g!=="all"&&!genres.includes(g))g="all";const pool=inTab.filter(t=>g==="all"||t.genre===g);
+ w.innerHTML=`<div class="phead k-wr"><div><div class="k-bar"></div><h1>Writing</h1><p>The ISLPR writing test has <b>two tasks</b> in about 60 minutes, plus time to proofread: Task 1 is a short email or letter; Task 2 is a longer text. Choose the task you want to practise. Every answer gets AI marking with a level, highlighted errors, tips and a better version.</p></div></div>
+ ${strategyBannerHTML("writing")}
+ ${patternTabsHTML([1,2].map(k=>({key:String(k),num:String(k),label:WR_PAT[k].label,sub:WR_PAT[k].sub,count:WRITING.filter(t=>t.task===k).length})),String(tab),"wr")}
+ ${howHTML(`${P.label}: how to do it`,P.how,"wr")}
+ <div class="row wgenres" role="group" aria-label="Text type"><button type="button" class="chip xcat" data-g="all" aria-pressed="${g==="all"}">All text types (${inTab.length})</button>${genres.map(k=>`<button type="button" class="chip xcat" data-g="${k}" aria-pressed="${g===k}">${esc(GUIDES[k].name)} (${inTab.filter(t=>t.genre===k).length})</button>`).join("")}</div>
+ ${filterBarHTML(pool.length,"tasks")}<div class="items k-wr stagger">${pool.map(t=>{const b=bestFor(t.id);return `<button class="item" type="button" data-id="${t.id}">${b?`<span class="done">${esc(b)}</span>`:""}<span class="meta"><span class="chip">${esc(GUIDES[t.genre].name)}</span><span class="chip line">${t.words} words</span></span><h4>${esc(t.title)}</h4><span class="note">${esc(t.prompt)}</span></button>`}).join("")}</div>
+ <h2 style="margin:34px 0 8px">Format guides for ${tab===1?"Task 1":"Task 2"}</h2><p class="note" style="margin-bottom:14px">Know the shape of each text type before you write. Examiners check that the format suits the task.</p>
+ <div class="grid g2">${(g==="all"?genres:[g]).map(k=>guideHTML(k,g!=="all")).join("")}</div>`;
+ $$(".ptabs button",w).forEach(b=>b.onclick=()=>{store.set("wtab",+b.dataset.p);rerender()});
+ $$(".wgenres button",w).forEach(b=>b.onclick=()=>{store.set("wgenre"+tab,b.dataset.g);rerender()});
+ $$(".item",w).forEach(b=>b.onclick=()=>{UI.writing=b.dataset.id;rerender()});bindFilter(w,"tasks")};
+</script>
+<style>
+.ptabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px;margin:0 0 16px}
+.ptabs button{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:16px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer;transition:transform .15s,box-shadow .2s,border-color .2s;min-width:0}
+.ptabs button:hover{transform:translateY(-2px);border-color:var(--c)}
+.ptabs .pnum{flex:none;min-width:44px;height:44px;padding:0 8px;border-radius:12px;display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:1.05rem;background:var(--surface-2);color:var(--c)}
+.ptabs .ptxt{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.ptabs .ptxt b{font-family:var(--f-display);font-size:1.02rem}
+.ptabs .ptxt span{font-size:.84rem;color:var(--muted)}
+.ptabs .pcount{flex:none;font-family:var(--f-mono,monospace);font-size:.85rem;padding:3px 9px;border-radius:999px;background:var(--surface-2)}
+.ptabs button[aria-selected="true"]{background:linear-gradient(135deg,var(--c),var(--c2));color:var(--on-c);border-color:transparent;box-shadow:0 12px 24px -14px var(--c)}
+.ptabs button[aria-selected="true"] .ptxt span{color:var(--on-c);opacity:.88}
+.ptabs button[aria-selected="true"] .pnum,.ptabs button[aria-selected="true"] .pcount{background:color-mix(in srgb,#fff 22%,transparent);color:var(--on-c)}
+.howcard{margin-bottom:18px}
+.wgenres{gap:6px;margin-bottom:12px}
+</style>
+<script>
 /* accordions: only one open at a time within the same group */
 document.addEventListener("toggle",e=>{const d=e.target;if(!(d instanceof HTMLDetailsElement)||!d.open||!d.isConnected)return;const p=d.parentElement;if(!p)return;
  p.querySelectorAll(":scope > details[open]").forEach(o=>{if(o!==d)o.open=false})},true);
