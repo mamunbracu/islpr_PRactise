@@ -3289,7 +3289,7 @@ function mockWriting(body,st,w){const tasks=st.ids.map(id=>mById(WRITING,id));if
  new Timer($("#wtm .timer",body),{endAt:S.end,secs:S.phase==="write"?3600:900,onEnd:()=>S.phase==="write"?toProof():(toast("Time's up. Your writing has been submitted."),finish())}).start();
  let armed=false;$("#wdone",body).onclick=e=>{if(!armed){armed=true;e.target.textContent=S.phase==="write"?"Click again to start proofreading":"Click again to submit";setTimeout(()=>{armed=false;e.target.textContent=S.phase==="write"?"Finish writing early":"Submit writing"},3000);return}S.phase==="write"?toProof():finish()}}
 async function mockResults(body){const m=MOCK.m,A=MOCK.ans,steps=MOCK.steps;
- if(!MOCK.results){MOCK.results={};MOCK.jobs=[];steps.forEach((s,i)=>{if(s.kind==="speaking")MOCK.jobs.push({i,skill:"speaking",label:s.label});if(s.kind==="rsum")MOCK.jobs.push({i,skill:"reading",label:s.label});if(s.kind==="listen")MOCK.jobs.push({i,skill:"listening",label:s.label});if(s.kind==="writing"){MOCK.jobs.push({i,skill:"writing",label:"Writing · Task 1",w:0});MOCK.jobs.push({i,skill:"writing",label:"Writing · Task 2",w:1})}})}
+ if(!MOCK.results){MOCK.results={};MOCK.jobs=[];steps.forEach((s,i)=>{if(s.kind==="speaking")MOCK.jobs.push({i,skill:"speaking",label:s.label});if(s.kind==="rsum")MOCK.jobs.push({i,skill:"reading",label:s.label});if(s.kind==="aloud"&&A[i]&&A[i].transcript)MOCK.jobs.push({i,skill:"reading",label:s.label+" (AI-marked)",aloud:true});if(s.kind==="listen")MOCK.jobs.push({i,skill:"listening",label:s.label});if(s.kind==="writing"){MOCK.jobs.push({i,skill:"writing",label:"Writing · Task 1",w:0});MOCK.jobs.push({i,skill:"writing",label:"Writing · Task 2",w:1})}})}
  const jobs=MOCK.jobs;const key=j=>j.i+"-"+(j.w??"");
  const draw=()=>{const done=jobs.filter(j=>MOCK.results[key(j)]).length;
   body.innerHTML=`<div class="card pad stack" id="mstat"><div class="row" style="justify-content:space-between"><h2>${done<jobs.length?"Marking your mock test":"Mock test results"}</h2><span class="chip line mono">${done}/${jobs.length} marked</span></div>
@@ -3297,7 +3297,8 @@ async function mockResults(body){const m=MOCK.m,A=MOCK.ans,steps=MOCK.steps;
    <div class="hist">${jobs.map(j=>{const r=MOCK.results[key(j)];return `<div class="hrow k-${SK[j.skill].k}"><i></i><span>${esc(j.label)}</span><span class="note">${r?(r.offline?"offline check":r.failed?"not marked":"marked"):"waiting…"}</span><b>${r&&!r.offline&&!r.failed?esc(r.level):"–"}</b></div>`}).join("")}</div></div><div id="mprof" class="stack" style="margin-top:18px"></div>`};
  draw();
  for(const j of jobs){if(MOCK.results[key(j)])continue;const ans=A[j.i];const s=steps[j.i];let prompt,offline;
-  if(j.skill==="speaking"){const set=mById(SPEAKING,s.id);prompt=speakingPrompt(set,ans);offline=()=>offlineSpeaking(set,ans)}
+  if(j.aloud){const it=mById(READING,s.id);const d=Object.assign(alignReading(it.text,ans.transcript),{transcript:ans.transcript,secs:ans.secs,wpm:ans.wpm});j.d=d;prompt=aloudPrompt(it,d);offline=()=>offlineAloud(it,d)}
+  else if(j.skill==="speaking"){const set=mById(SPEAKING,s.id);prompt=speakingPrompt(set,ans);offline=()=>offlineSpeaking(set,ans)}
   else if(j.skill==="reading"){const it=mById(READING,s.id);prompt=comprehensionPrompt("reading",it,ans);offline=()=>offlineComprehension(it,ans)}
   else if(j.skill==="listening"){const it=mById(LISTENING,s.id);prompt=comprehensionPrompt("listening",it,ans);offline=()=>offlineComprehension(it,ans)}
   else{const t=mById(WRITING,s.ids[j.w]);const text=ans[j.w]||"";if(wc(text)<5){MOCK.results[key(j)]={level:"0",summary:"No answer was written.",criteria:[],errors:[],tips:["Always write something for both tasks; a partial answer scores higher than none."],taskCoverage:t.points.map(p=>({point:p,covered:false}))};draw();continue}prompt=writingPrompt(t,text);offline=()=>offlineWriting(t,text)}
@@ -3309,7 +3310,7 @@ function profile(body){const m=MOCK.m,A=MOCK.ans,steps=MOCK.steps,jobs=MOCK.jobs
  const aloudStep=steps.findIndex(s=>s.kind==="aloud");const aloud=A[aloudStep];
  const prof=$("#mprof",body);
  prof.innerHTML=`<div class="card pad stack"><h3>Your four-skill profile</h3><div class="profile">${["speaking","reading","listening","writing"].map(s=>{const l=lv[s],t=T[s];const met=l&&lvlIdx(l)>=lvlIdx(t);return `<div class="pcell k-${SK[s].k}"><span class="eyebrow">${SK[s].name}</span><b>${esc(l||"–")}</b><span class="gap ${l?(met?"met":"notmet"):""}">${l?(met?"Meets target "+t:(lvlIdx(t)-lvlIdx(l))+" below target "+t):"Not marked"}</span></div>`}).join("")}</div>
-  ${aloud?`<p class="note">Read-aloud self-rating: <b>${esc(aloud.self)}</b> at ${aloud.wpm||"–"} wpm (not included in the reading level).</p>`:""}
+  ${aloud&&aloud.self&&!aloud.transcript?`<p class="note">Read-aloud self-rating: <b>${esc(aloud.self)}</b> at ${aloud.wpm||"–"} wpm (not included in the reading level; use Chrome, Edge or Safari with the microphone for AI marking).</p>`:""}
   <p class="note">Open each part below for the full feedback: highlighted errors, model answers and tips.</p></div>
   <div class="stack" id="mdetail">${jobs.map((j,n)=>`<details class="guide k-${SK[j.skill].k}" data-n="${n}"><summary><span>${esc(j.label)}</span><span class="mono">${esc((MOCK.results[key(j)]||{}).level||"")}</span></summary><div class="gbody"></div></details>`).join("")}</div>
   ${jobs.some(j=>{const r=MOCK.results[key(j)];return r&&(r.offline||r.failed)})?`<div class="callout k-wr"><b>Some parts weren't AI-marked.</b> ${AI.pick()?"AI marking is connected now.":'<a href="#connect">Set up AI marking</a>, then come back to this page.'} <button class="btn sm" type="button" id="remark" style="margin-left:6px">Mark those parts with AI</button></div>`:""}
@@ -3317,7 +3318,8 @@ function profile(body){const m=MOCK.m,A=MOCK.ans,steps=MOCK.steps,jobs=MOCK.jobs
  if(!MOCK.saved){MOCK.saved=true;Object.entries(lv).forEach(([s,l])=>{if(l)addHist({skill:s,id:m.id,title:m.title,level:l,mode:"mock"})});const sv=store.get("mockresults",{});sv[m.id]={};["speaking","reading","listening","writing"].forEach(s=>sv[m.id][s[0].toUpperCase()]=lv[s]||"–");Object.keys(sv[m.id]).forEach(k=>sv[m.id][k]=k+" "+sv[m.id][k]);store.set("mockresults",sv)}
  $$("#mdetail details",prof).forEach(d=>d.addEventListener("toggle",()=>{if(!d.open||d.dataset.done)return;d.dataset.done=1;const j=jobs[+d.dataset.n];const r=MOCK.results[key(j)];const b=$(".gbody",d);const s=steps[j.i];const ans=A[j.i];
   if(!r||r.failed){b.innerHTML=`<p class="note">This part couldn't be marked (${esc(r&&r.code||"error")}). You can practise it again from its section.</p>`;return}
-  if(j.skill==="speaking")renderSpeaking(b,mById(SPEAKING,s.id),ans,r,{save:false,compact:true});
+  if(j.aloud){const it=mById(READING,s.id);renderAloud(b,it,j.d||Object.assign(alignReading(it.text,ans.transcript),{transcript:ans.transcript,secs:ans.secs,wpm:ans.wpm}),r,{save:false})}
+  else if(j.skill==="speaking")renderSpeaking(b,mById(SPEAKING,s.id),ans,r,{save:false,compact:true});
   else if(j.skill==="reading")renderComprehension(b,mById(READING,s.id),ans,r,"reading",{save:false,compact:true});
   else if(j.skill==="listening")renderComprehension(b,mById(LISTENING,s.id),ans,r,"listening",{save:false,compact:true});
   else renderWriting(b,mById(WRITING,s.ids[j.w]),ans[j.w]||"",r,{save:false,compact:true})}));
@@ -4333,6 +4335,78 @@ const _vg=VIEWS.grammar;VIEWS.grammar=function(w){_vg(w);const cur=store.get("gr
 .kwflat{background:transparent;padding:0}
 .grule-card{scroll-margin-top:calc(var(--hdr,64px) + 20px)}
 @media (max-width:640px){.gtable{min-width:0}.gtable thead{display:none}.gtable tr{display:block;padding:8px 0;border-bottom:1px solid var(--line)}.gtable td{display:block;border:0;padding:2px 4px}.gtable tr:nth-child(even) td{background:transparent}.gtable td.gexcell{color:var(--muted);font-style:italic}}
+</style>
+<script>
+/* ===== AI marking everywhere: read aloud (speech recognition + AI), Q&A reading/listening, grammar practice ===== */
+const NUMW={"0":"zero","1":"one","2":"two","3":"three","4":"four","5":"five","6":"six","7":"seven","8":"eight","9":"nine","10":"ten","11":"eleven","12":"twelve","13":"thirteen","14":"fourteen","15":"fifteen","16":"sixteen","17":"seventeen","18":"eighteen","19":"nineteen","20":"twenty","30":"thirty","40":"forty","50":"fifty"};
+const rtoks=s=>String(s).toLowerCase().replace(/[’']/g,"").replace(/[^a-z0-9 ]+/g," ").split(/\s+/).filter(Boolean).map(t=>NUMW[t]||t);
+function alignReading(text,heard){const P=rtoks(text),H=rtoks(heard);const n=P.length,m=H.length;
+ const dp=Array.from({length:n+1},()=>new Int16Array(m+1));for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)dp[i][j]=P[i]===H[j]?dp[i+1][j+1]+1:Math.max(dp[i+1][j],dp[i][j+1]);
+ const ok=new Array(n).fill(false);const extra=[];let i=0,j=0;while(i<n&&j<m){if(P[i]===H[j]){ok[i]=true;i++;j++}else if(dp[i+1][j]>=dp[i][j+1])i++;else{extra.push(H[j]);j++}}while(j<m)extra.push(H[j++]);
+ let last=-1;ok.forEach((v,k)=>{if(v)last=k});const read=last+1;const matched=ok.filter(Boolean).length;
+ const missed=P.filter((w,k)=>k<read&&!ok[k]);return {P,ok,read,total:n,matched,acc:read?matched/read:0,coverage:n?read/n:0,missed,extra}}
+function aloudPrompt(item,d){return `You are an ISLPR examiner rating the READ-ALOUD part of the reading test for a candidate training to be a secondary Mathematics and IPT teacher in NSW (target ISLPR Level 4). The candidate read the passage aloud. Their speech was converted to text by the browser's speech recognition, so a word that was recognised differently often shows a pronunciation problem, but recognition is not perfect: be fair and do not over-penalise single small words.
+Passage (${wc(item.text)} words):\n"""${item.text}"""
+What the speech recogniser heard:\n"""${d.transcript}"""
+Measured: reading time ${d.secs} seconds, ${d.wpm} words per minute (a good exam pace is about 130–160). Words read correctly: ${Math.round(d.acc*100)}% of the part read. Part of passage read: ${Math.round(d.coverage*100)}%.
+Words in the passage that were missed or recognised differently: ${d.missed.slice(0,40).join(", ")||"none"}.
+Extra words heard that are not in the passage: ${d.extra.slice(0,25).join(", ")||"none"}.
+Hard words in this passage: ${(item.tricky||[]).join(", ")}.
+${SCALE_NOTE}
+Reply with only JSON: {"level":"ISLPR level such as 3, 3+ or 4","summary":"2-3 sentences on the overall reading","criteria":[{"name":"Accuracy","level":"","comment":""},{"name":"Fluency and pace","level":"","comment":""},{"name":"Phrasing and pausing","level":"","comment":""},{"name":"Pronunciation","level":"","comment":""}],"problemWords":[{"word":"passage word","heard":"what was recognised, or empty","syllables":"syl-LA-ble with stress in CAPITALS","tip":"short tip"}],"tips":["3-4 specific improvements"],"drill":"the first two sentences of the passage with / for short pauses and CAPITALS on stressed words"}`}
+function offlineAloud(item,d){const lv=d.acc>=.97&&d.wpm>=115&&d.wpm<=180?"4":d.acc>=.93?"3+":d.acc>=.85?"3":"2+";
+ return {offline:true,level:lv,summary:`Estimated from your accuracy (${Math.round(d.acc*100)}%) and pace (${d.wpm} wpm). Connect AI marking for a full examiner rating.`,criteria:[{name:"Accuracy",level:lv,comment:`${d.matched} of ${d.read} words recognised as read correctly.`},{name:"Fluency and pace",level:d.wpm<115||d.wpm>180?"3":"4",comment:d.wpm<115?"A little slow: practise reading in phrases.":d.wpm>180?"Too fast: slow down and pause at punctuation.":"Good, steady pace."}],problemWords:d.missed.slice(0,10).map(w=>({word:w,heard:"",syllables:"",tip:"Practise this word slowly, then at normal speed."})),tips:["Pause at commas and full stops.","Say word endings (-s, -ed) clearly.","Stress the key content words in each sentence."],drill:""}}
+function renderAloud(box,item,d,r,o={}){const lv=String(r.level||"–");
+ box.innerHTML=`<div class="card result-head k-rd">${ringHTML(lv,r.offline?"estimate":"AI examiner","rd")}<div class="stack" style="gap:8px"><span class="eyebrow">Read aloud · ${r.offline?"offline estimate":"AI marking"}</span><h3>${esc(LEVEL_NAMES[lv]||"Read-aloud level "+lv)}</h3><p>${esc(r.summary||"")}</p><div class="row" style="gap:6px"><span class="chip line mono">${d.wpm} wpm</span><span class="chip line mono">${Math.round(d.acc*100)}% accurate</span><span class="chip line mono">${Math.round(d.coverage*100)}% of passage read</span></div></div></div>
+ ${(r.criteria||[]).length?`<div class="card pad stack k-rd"><h3>How you were rated</h3><div class="crits">${r.criteria.map(c=>`<div class="crit"><b>${esc(c.name)}</b><span class="chip mono">${esc(c.level||"")}</span><p class="note">${esc(c.comment||"")}</p></div>`).join("")}</div></div>`:""}
+ <div class="card pad stack k-rd"><h3>Your reading, word by word</h3><p class="note"><span class="amiss">Highlighted</span> words were missed or heard differently${d.read<d.total?"; faded words were not read":""}.</p><div class="passage aloudmap">${d.P.map((w,k)=>`<span class="${k>=d.read?"anot":d.ok[k]?"":"amiss"}">${esc(w)}</span>`).join(" ")}</div></div>
+ ${(r.problemWords||[]).length?`<div class="card pad stack k-rd"><h3>Words to practise</h3><div class="pwords">${r.problemWords.slice(0,12).map(p=>`<div class="pword"><button class="btn ghost sm hearw" type="button" data-w="${esc(p.word)}">${ic("vol",14)}</button><b>${esc(p.word)}</b>${p.syllables?`<span class="mono">${esc(p.syllables)}</span>`:""}${p.heard?`<span class="note">heard as “${esc(p.heard)}”</span>`:""}<span class="note">${esc(p.tip||"")}</span></div>`).join("")}</div></div>`:""}
+ ${(r.tips||[]).length||r.drill?`<div class="card pad stack k-rd"><h3>How to improve</h3><ul class="clean">${(r.tips||[]).map(t=>`<li>${esc(t)}</li>`).join("")}</ul>${r.drill?`<div class="ans model"><span class="eyebrow">Practise this phrasing</span><br>${esc(r.drill)}</div>`:""}</div>`:""}`;
+ $$(".hearw",box).forEach(b=>b.onclick=()=>TTS.say(b.dataset.w,{rate:.8}));animateResults&&animateResults(box);
+ if(o.save!==false)addHist({skill:"reading",id:item.id,title:item.title+" (read aloud)",level:lv})}
+const _raOrig=readAloud;readAloud=function(w,item,opts){_raOrig(w,item,opts);const exam=!!(opts&&opts.exam);const go=$("#go",w);if(!go)return;
+ const card=go.closest(".card");const live=document.createElement("div");live.className="stack";live.innerHTML=`<p class="note" id="alive">${STT.SR?`${ic("mic",14)} Your microphone listens while you read, then the AI examiner marks your accuracy, pace, phrasing and pronunciation.`:"Voice recognition isn't available in this browser (use Chrome, Edge or Safari for AI marking). You can still rate yourself below."}</p><p class="note aheard" id="aheard" hidden></p>`;card.append(live);
+ let rec=false,t0=0,heard="";
+ go.addEventListener("click",()=>{if(!rec){rec=true;t0=Date.now();heard="";$("#aheard",w).hidden=true;
+   if(STT.SR&&!STT.blocked)STT.start({onText:(f,i)=>{heard=f;const h=$("#aheard",w);h.hidden=false;h.textContent="Hearing: …"+(f+" "+i).trim().split(/\s+/).slice(-14).join(" ")},onError:c=>{$("#alive",w).textContent=micErr(c)+" Rate yourself below instead."}});return}
+  rec=false;STT.stop();const secs=Math.max(1,Math.round((Date.now()-t0)/1000));if(wc(heard)<5)return;
+  const a=alignReading(item.text,heard);const wpm=Math.round(a.read/(secs/60));const d=Object.assign(a,{transcript:heard,secs,wpm});
+  const chk=$("#chk",w);if(chk)chk.hidden=true;let box=$("#aibox",w);if(!box){box=document.createElement("div");box.id="aibox";box.className="stack";$("#ares",w).before(box)}
+  if(exam){box.innerHTML=`<div class="card pad stack k-rd"><h3>Reading recorded</h3><p class="note">${wpm} words per minute · ${Math.round(a.coverage*100)}% of the passage read. The AI examiner will mark it with the rest of your test.</p><div class="row"><button class="btn primary" type="button" id="aisave">Save and continue</button></div></div>`;$("#aisave",box).onclick=()=>opts.onDone({wpm,transcript:heard,secs,auto:true});return}
+  mark(box,{msgs:["Comparing your reading with the passage…","Checking pace and phrasing…","Finding words to practise…"],prompt:aloudPrompt(item,d),render:r=>renderAloud(box,item,d,r),offline:()=>offlineAloud(item,d)})},false)};
+
+/* ---- Q&A reading & listening: practise with full AI marking ---- */
+const _qaP=qaPractise;qaPractise=function(skill,i){if(skill!=="reading"&&skill!=="listening")return _qaP(skill,i);const it=QA[skill][i];
+ const qs=it[3].map(([q,a])=>({q,key:a,kw:kwOf(a)}));
+ if(skill==="reading"){const id="qar"+i;if(!byId(READING,id)){const pts=String(it[4]).split(/(?<=\.)\s+/).filter(s=>wc(s)>3).slice(0,5).map(s=>({p:s,kw:kwOf(s)}));READING.push({id,type:"summary",title:it[0],topic:it[1],text:it[2],questions:qs,points:pts,qa:true})}
+  window.__back={id,route:"qa",label:"Back to Q&A practice",focus:skill+":"+i};navigate("reading");UI.reading=id;rerender();return}
+ const id="qal"+i;if(!byId(LISTENING,id)){const lines=typeof it[2]==="string"?[{s:"A",t:it[2]}]:it[2].map(([s,t])=>({s,t}));const n=wc(lines.map(l=>l.t).join(" "));LISTENING.push({id,len:n<130?"short":n<300?"medium":"long",title:it[0],setting:it[1],lines,questions:qs,points:qs.map(q=>({p:q.key,kw:q.kw})),qa:true})}
+ window.__back={id,route:"qa",label:"Back to Q&A practice",focus:skill+":"+i};navigate("listening");UI.listening=id;rerender()};
+const _qaCard=qaCardHTML;qaCardHTML=function(skill,it,i,known,L){let h=_qaCard(skill,it,i,known,L);
+ if(skill==="reading"||skill==="listening")h=h.replace(/<\/article>$/,`<div class="row"><button class="btn sm qago" type="button">${ic("spark",15)} ${skill==="reading"?"Summarise and answer, then get AI marking":"Listen, answer by voice or typing, then get AI marking"}</button></div></article>`);return h};
+/* keep Q&A practice copies out of the normal lists */
+["listReading","listListening","listWriting","listSpeaking"].forEach(fn=>{if(typeof window[fn]!=="function")return;const f=window[fn];window[fn]=function(w){const keep={R:READING.slice(),L:LISTENING.slice(),W:WRITING.slice(),S:SPEAKING.slice()};const drop=x=>x.qa||/^qa[wslr]\d/.test(x.id);
+ READING.splice(0,READING.length,...keep.R.filter(x=>!drop(x)));LISTENING.splice(0,LISTENING.length,...keep.L.filter(x=>!drop(x)));WRITING.splice(0,WRITING.length,...keep.W.filter(x=>!drop(x)));SPEAKING.splice(0,SPEAKING.length,...keep.S.filter(x=>!drop(x)));
+ try{return f(w)}finally{READING.splice(0,READING.length,...keep.R);LISTENING.splice(0,LISTENING.length,...keep.L);WRITING.splice(0,WRITING.length,...keep.W);SPEAKING.splice(0,SPEAKING.length,...keep.S)}}});
+
+/* ---- Grammar practice: AI check when the answer isn't an exact match ---- */
+const _vgAI=VIEWS.grammar;VIEWS.grammar=function(w){_vgAI(w);$$(".gex",w).forEach(box=>{const show=$(".gshow",box),inp=$("input",box),out=$(".gans",box);if(!show||!inp)return;
+ show.addEventListener("click",()=>{const mine=inp.value.trim();if(!mine||out.querySelector(".gok"))return;
+  out.insertAdjacentHTML("beforeend",`<div style="margin-top:8px"><button class="btn sm gai" type="button">${ic("spark",14)} Is my version also correct? Ask AI</button><div class="gaiout"></div></div>`);
+  $(".gai",out).onclick=async e=>{const b=e.currentTarget,o=$(".gaiout",out);if(!AI.pick()){o.innerHTML=`<p class="note">AI isn't connected. See AI setup.</p>`;return}b.disabled=true;o.innerHTML=`<p class="note">Checking…</p>`;
+   try{const r=await AI.json(`An English learner preparing for the ISLPR test did this grammar exercise.\nExercise: ${$(".gq",box).textContent}\nModel answer: ${box.dataset.a}\nLearner's answer: ${mine}\nIs the learner's answer grammatically correct and does it complete the exercise? Accept any correct alternative. Reply with only JSON: {"correct":true or false,"explanation":"one or two simple sentences explaining why, naming the grammar rule","corrected":"the learner's sentence corrected, or the same sentence if already correct"}`);
+    o.innerHTML=`<p><b class="${r.correct?"gok":"gno"}">${r.correct?"✓ Yes, your version is correct.":"✗ Not quite."}</b> ${esc(String(r.explanation||""))}</p>${!r.correct&&r.corrected?`<p class="note">Corrected: ${esc(String(r.corrected))}</p>`:""}`}catch(err){o.innerHTML=`<p class="note">The AI is busy. Try again in a minute.</p>`;b.disabled=false}}})})};
+</script>
+<style>
+.aheard{font-style:italic;min-height:1.2em}
+.aloudmap span{padding:1px 2px;border-radius:4px}
+.aloudmap .amiss,.amiss{background:color-mix(in srgb,#e5484d 22%,transparent);text-decoration:underline wavy color-mix(in srgb,#e5484d 70%,transparent)}
+.aloudmap .anot{opacity:.35}
+.crits{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px}
+.crit{display:flex;flex-direction:column;gap:4px;padding:12px;border-radius:12px;background:var(--surface-2)}
+.crit .chip{align-self:flex-start}
+.pwords{display:flex;flex-direction:column;gap:8px}
+.pword{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:8px 10px;border-radius:10px;background:var(--surface-2)}
 </style>
 <script>
 /* accordions: only one open at a time within the same group */
