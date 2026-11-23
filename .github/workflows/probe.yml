@@ -1,0 +1,18 @@
+name: probe-ai
+on: push
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free OVH endpoint
+        run: |
+          for m in Mistral-Small-3.2-24B-Instruct-2506 Meta-Llama-3_3-70B-Instruct gpt-oss-120b; do
+            echo "=== $m"
+            curl -sS -m 60 -i https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions \
+              -H 'content-type: application/json' -H 'Origin: https://mamunbracu.github.io' \
+              -d "{\"model\":\"$m\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply with the word OK\"}],\"max_tokens\":20}" | head -c 1500; echo
+          done
+          echo "=== models list"
+          curl -sS -m 30 https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/models | head -c 3000; echo
+          echo "=== catalog"
+          curl -sS -m 30 "https://catalog.endpoints.ai.ovh.net/rest/v1/models_v2?order=id" | head -c 4000; echo
