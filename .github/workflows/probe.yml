@@ -6,15 +6,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: {ref: probe-ai}
-      - name: Real prompt
+      - name: Pollinations real prompts back to back
         run: |
-          echo "######## llm7 free-tier models"
-          curl -sS -m 30 https://api.llm7.io/v1/models | jq -r '.data[] | select(.tier!="pro") | "\(.id)  tier=\(.tier) json=\(.json_mode) ctx=\(.context_window.tokens)"' | head -40
-          echo "######## pollinations anonymous models"
-          curl -sS -m 30 https://text.pollinations.ai/models | jq -r '.[] | "\(.name) tier=\(.tier // .anonymous // "")"' 2>/dev/null | head -30
-          run(){ jq -n --rawfile p prompt.txt --arg m "$2" '{model:$m,messages:[{role:"user",content:$p}],temperature:0.3,max_tokens:4000}' > body.json
-            for k in 1 2 3; do s=$(date +%s.%N); code=$(curl -sS -m 150 -o out.json -w '%{http_code}' -D h.txt "$1" -H 'content-type: application/json' -d @body.json); e=$(date +%s.%N)
-              echo "######## $1 $2 call$k http=$code secs=$(echo "$e-$s"|bc) $(grep -iE 'ratelimit-remaining|x-ratelimit|retry-after' h.txt | tr -d '\r' | tr '\n' ' ')"
-              jq -r '.choices[0].message.content // .error.message // .' out.json 2>/dev/null | head -c 900; echo; done; }
-          run https://api.llm7.io/v1/chat/completions default
-          run https://text.pollinations.ai/openai openai
+          for m in openai openai-fast; do for i in 0 1 2; do
+            jq -n --rawfile p p$i.txt --arg m "$m" --arg n "$RANDOM$i" '{model:$m,messages:[{role:"user",content:($p+"\n(ref "+$n+")")}],temperature:0.3,max_tokens:4000,referrer:"mamunbracu.github.io"}' > body.json
+            s=$(date +%s.%N); code=$(curl -sS -m 180 -o out.json -w '%{http_code}' -D h.txt https://text.pollinations.ai/openai -H 'content-type: application/json' -H 'Origin: https://mamunbracu.github.io' -H 'Referer: https://mamunbracu.github.io/islpr_PRactise/' -d @body.json); e=$(date +%s.%N)
+            echo "######## $m prompt$i http=$code secs=$(echo "$e-$s"|bc) model=$(jq -r .model out.json 2>/dev/null) tier=$(jq -r .user_tier out.json 2>/dev/null) $(grep -iE 'retry|limit' h.txt | tr -d '\r' | tr '\n' ' ')"
+            jq -r '.choices[0].message.content // .error.message // .' out.json 2>/dev/null | head -c 700; echo
+          done; done
