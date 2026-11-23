@@ -378,16 +378,16 @@ footer{max-width:1200px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-
 <ul style="margin:8px 0 0;padding-left:1.2em"><li>Use your GitHub Pages address, like <b>https://yourname.github.io/islpr-prep/</b></li><li>Or download the file and open it in Chrome, Safari or Edge</li></ul></div></main>
 <footer>Practice material written for ISLPR-style preparation. Levels given here are AI estimates to guide your study, not official ISLPR results. Check your registration body's current requirements. <button type="button" class="btn ghost sm" onclick="gateLock()" style="margin-left:6px">Sign out</button></footer>
 <div id="gate" role="dialog" aria-modal="true" aria-labelledby="gtitle" hidden>
- <div class="gbg"><i></i><i></i><i></i><i></i></div>
- <div class="gcard">
-  <div class="glogo" aria-hidden="true"><svg viewBox="0 0 48 48" width="40" height="40"><path d="M10 36V12l14 9 14-9v24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-  <p id="gtitle" class="gt">ISLPR Prep Studio</p>
-  <p class="gsub">Level 4 in every skill · for NSW Maths &amp; IPT teachers</p>
-  <p class="gprompt" id="gprompt">Enter your passcode</p>
-  <div class="gdots" id="gdots" aria-live="polite"><span></span><span></span><span></span><span></span></div>
+ <div class="lg-bg"><i></i><i></i><i></i><i></i></div>
+ <div class="lg-card">
+  <div class="lg-logo" aria-hidden="true"><svg viewBox="0 0 48 48" width="40" height="40"><path d="M10 36V12l14 9 14-9v24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  <p id="gtitle" class="lg-title">ISLPR Prep Studio</p>
+  <p class="lg-sub">Level 4 in every skill · for NSW Maths &amp; IPT teachers</p>
+  <p class="lg-prompt" id="lg-prompt">Enter your passcode</p>
+  <div class="lg-dots" id="lg-dots" aria-live="polite"><span></span><span></span><span></span><span></span></div>
   <input id="gin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="4" aria-label="Passcode" class="sr">
-  <div class="gpad"></div>
-  <label class="gremember"><input type="checkbox" id="grem" checked> Keep me signed in on this device</label>
+  <div class="lg-pad"></div>
+  <label class="lg-remember"><input type="checkbox" id="grem" checked> Keep me signed in on this device</label>
  </div>
 </div>
 <style>
@@ -395,47 +395,47 @@ footer{max-width:1200px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-
 #gate[hidden]{display:none!important}
 #gate.out{animation:gout .7s cubic-bezier(.7,0,.3,1) forwards}
 @keyframes gout{to{opacity:0;transform:scale(1.06);filter:blur(6px)}}
-.gbg{position:absolute;inset:0;overflow:hidden}
-.gbg i{position:absolute;width:55vmax;height:55vmax;border-radius:50%;filter:blur(70px);opacity:.55;animation:gfloat 18s ease-in-out infinite alternate}
-.gbg i:nth-child(1){background:#5b5bf7;left:-15vmax;top:-20vmax}
-.gbg i:nth-child(2){background:#11b5a4;right:-20vmax;top:10vmax;animation-delay:-5s}
-.gbg i:nth-child(3){background:#f2766b;left:10vmax;bottom:-30vmax;animation-delay:-9s}
-.gbg i:nth-child(4){background:#a855f7;right:5vmax;bottom:-25vmax;width:35vmax;height:35vmax;animation-delay:-13s}
+.lg-bg{position:absolute;inset:0;overflow:hidden}
+.lg-bg i{position:absolute;width:55vmax;height:55vmax;border-radius:50%;filter:blur(70px);opacity:.55;animation:gfloat 18s ease-in-out infinite alternate}
+.lg-bg i:nth-child(1){background:#5b5bf7;left:-15vmax;top:-20vmax}
+.lg-bg i:nth-child(2){background:#11b5a4;right:-20vmax;top:10vmax;animation-delay:-5s}
+.lg-bg i:nth-child(3){background:#f2766b;left:10vmax;bottom:-30vmax;animation-delay:-9s}
+.lg-bg i:nth-child(4){background:#a855f7;right:5vmax;bottom:-25vmax;width:35vmax;height:35vmax;animation-delay:-13s}
 @keyframes gfloat{0%{transform:translate(0,0) scale(1)}50%{transform:translate(6vmax,-4vmax) scale(1.12)}100%{transform:translate(-5vmax,5vmax) scale(.95)}}
-.gcard{position:relative;width:min(380px,100%);padding:30px 26px 24px;border-radius:28px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);box-shadow:0 30px 80px -20px rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;animation:gin .8s cubic-bezier(.2,.8,.2,1) both}
-@keyframes gin{from{opacity:0;transform:translateY(24px) scale(.97)}}
-.glogo{width:64px;height:64px;border-radius:20px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,#5b5bf7,#11b5a4);box-shadow:0 12px 30px -10px #5b5bf7;animation:gpulse 3s ease-in-out infinite}
+.lg-card{position:relative;width:min(380px,100%);padding:30px 26px 24px;border-radius:28px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);box-shadow:0 30px 80px -20px rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;animation:lgin .8s cubic-bezier(.2,.8,.2,1) both}
+@keyframes lgin{from{opacity:0;transform:translateY(24px) scale(.97)}}
+.lg-logo{width:64px;height:64px;border-radius:20px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,#5b5bf7,#11b5a4);box-shadow:0 12px 30px -10px #5b5bf7;animation:gpulse 3s ease-in-out infinite}
 @keyframes gpulse{50%{transform:translateY(-3px);box-shadow:0 18px 36px -10px #11b5a4}}
-#gate .gt{margin:6px 0 0;font-weight:800;font-family:var(--f-display,inherit);font-size:1.6rem;letter-spacing:-.01em;color:#fff}
-.gsub{margin:0;font-size:.88rem;color:rgba(238,240,255,.72)}
-.gprompt{margin:12px 0 2px;font-weight:700;color:#fff;min-height:1.3em}
-.gprompt.bad{color:#ffb4ab}
-.gdots{display:flex;gap:16px;margin:4px 0 10px}
-.gdots span{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.6);transition:background .15s,transform .15s}
-.gdots span.on{background:#fff;transform:scale(1.15)}
-.gdots.shake{animation:gshake .45s}
-.gdots.ok span{background:#3ee0a8;border-color:#3ee0a8}
+#gate .lg-title{margin:6px 0 0;font-weight:800;font-family:var(--f-display,inherit);font-size:1.6rem;letter-spacing:-.01em;color:#fff}
+.lg-sub{margin:0;font-size:.88rem;color:rgba(238,240,255,.72)}
+.lg-prompt{margin:12px 0 2px;font-weight:700;color:#fff;min-height:1.3em}
+.lg-prompt.bad{color:#ffb4ab}
+.lg-dots{display:flex;gap:16px;margin:4px 0 10px}
+.lg-dots span{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.6);transition:background .15s,transform .15s}
+.lg-dots span.on{background:#fff;transform:scale(1.15)}
+.lg-dots.shake{animation:gshake .45s}
+.lg-dots.ok span{background:#3ee0a8;border-color:#3ee0a8}
 @keyframes gshake{20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}
-.gpad{display:grid;grid-template-columns:repeat(3,72px);gap:12px;justify-content:center}
-.gpad button{width:72px;height:72px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;font:600 1.5rem/1 var(--f-display,system-ui);cursor:pointer;transition:background .15s,transform .1s}
-.gpad button:hover{background:rgba(255,255,255,.16)}
-.gpad button:active{transform:scale(.92);background:rgba(255,255,255,.26)}
-.gpad button.gfn{font-size:1rem;background:transparent;border-color:transparent}
-.gremember{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.85rem;color:rgba(238,240,255,.75);cursor:pointer}
-@media (max-height:640px){.gpad{grid-template-columns:repeat(3,58px)}.gpad button{width:58px;height:58px;font-size:1.25rem}.glogo{display:none}}
-@media (prefers-reduced-motion:reduce){.gbg i,.glogo,.gcard{animation:none}}
+.lg-pad{display:grid;grid-template-columns:repeat(3,72px);gap:12px;justify-content:center}
+.lg-pad button{width:72px;height:72px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;font:600 1.5rem/1 var(--f-display,system-ui);cursor:pointer;transition:background .15s,transform .1s}
+.lg-pad button:hover{background:rgba(255,255,255,.16)}
+.lg-pad button:active{transform:scale(.92);background:rgba(255,255,255,.26)}
+.lg-pad button.lg-fn{font-size:1rem;background:transparent;border-color:transparent}
+.lg-remember{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.85rem;color:rgba(238,240,255,.75);cursor:pointer}
+@media (max-height:640px){.lg-pad{grid-template-columns:repeat(3,58px)}.lg-pad button{width:58px;height:58px;font-size:1.25rem}.lg-logo{display:none}}
+@media (prefers-reduced-motion:reduce){.lg-bg i,.lg-logo,.lg-card{animation:none}}
 body.gated{overflow:hidden}
 </style>
 <script>
 (function(){const G=document.getElementById("gate");
- const pad=G.querySelector(".gpad");pad.innerHTML=["1","2","3","4","5","6","7","8","9","","0","⌫"].map(k=>k===""?"<span></span>":`<button type="button" ${k==="⌫"?'class="gfn" aria-label="Delete"':""} data-k="${k}">${k}</button>`).join("");
+ const pad=G.querySelector(".lg-pad");pad.innerHTML=["1","2","3","4","5","6","7","8","9","","0","⌫"].map(k=>k===""?"<span></span>":`<button type="button" ${k==="⌫"?'class="lg-fn" aria-label="Delete"':""} data-k="${k}">${k}</button>`).join("");
  const H=s=>{let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return (h>>>0).toString(36)};const OK="1o65g6f";
  const KEY="islpr.gate";let unlocked=false;try{const v=JSON.parse(localStorage.getItem(KEY)||"null");unlocked=!!(v&&v.h===OK&&v.until>Date.now())}catch(e){}
  try{if(sessionStorage.getItem(KEY)===OK)unlocked=true}catch(e){}
  const force=/[?&]gate=1/.test(location.search);if(!force&&navigator.webdriver)unlocked=true;
  if(unlocked)return;
  G.hidden=false;document.body.classList.add("gated");
- const dots=[...G.querySelectorAll(".gdots span")],dw=G.querySelector(".gdots"),pr=G.querySelector("#gprompt"),inp=G.querySelector("#gin");let code="";
+ const dots=[...G.querySelectorAll(".lg-dots span")],dw=G.querySelector(".lg-dots"),pr=G.querySelector("#lg-prompt"),inp=G.querySelector("#gin");let code="";
  const draw=()=>dots.forEach((d,i)=>d.classList.toggle("on",i<code.length));
  const check=()=>{if(H(code)===OK){dw.classList.add("ok");pr.classList.remove("bad");pr.textContent="Welcome back!";
    try{if(G.querySelector("#grem").checked)localStorage.setItem(KEY,JSON.stringify({h:OK,until:Date.now()+180*864e5}));else sessionStorage.setItem(KEY,OK)}catch(e){}
