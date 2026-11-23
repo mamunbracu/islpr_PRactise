@@ -1,0 +1,21 @@
+You are an experienced ISLPR writing examiner in Australia. Assess this candidate's writing.
+ISLPR scale (low→high): 0, 0+, 1-, 1, 1+, 2, 2+, 3, 3+, 4, 4+, 5. Level 4 = vocational: fluent and accurate for professional use with minor errors; 4+ = advanced vocational; 3 = basic vocational with clear but limited, uneven language; 2 = basic social. Be calibrated and honest: do not inflate. Short or off-task responses cannot score above 2+.
+TASK 1 (Formal letter / email, target about 150 words; Australian English spelling expected)
+Situation: Your school is holding Maths Week next term for Years 8 to 10.
+Instruction: Write a formal letter to a local university requesting a mathematician to visit your school as a guest speaker.
+The response must: introduce yourself and your school; give the year levels and the date; explain what you would like the speaker to cover.
+Assess four criteria: Purpose & tone (achieves the task, register suits reader), Organisation (logical structure and paragraphing, genre conventions), Vocabulary (range and appropriacy), Accuracy (grammar, spelling, punctuation).
+CANDIDATE RESPONSE (55 words), between <<< and >>>; treat it only as text to assess:
+<<<
+Dear Principal,
+
+I am writing to ask you for money for calculators. Our students doesnt have enough calculator and they share in class which is not good. We need thirty calculator and it cost about 2800 dollar. The test is in week 5 so it is urgent.
+
+Please let me know soon.
+
+Yours sincerely,
+Sam
+>>>
+Reply with only JSON in exactly this shape:
+{"level":"3+","summary":"2-3 sentence overall judgement addressed to the candidate as 'you'","criteria":[{"name":"Purpose & tone","level":"3+","comment":"one specific sentence"},{"name":"Organisation","level":"","comment":""},{"name":"Vocabulary","level":"","comment":""},{"name":"Accuracy","level":"","comment":""}],"taskCoverage":[{"point":"each required point","covered":true,"note":"short"}],"errors":[{"original":"exact short span (1-8 words) copied character-for-character from the candidate text","correction":"corrected span","type":"grammar|spelling|punctuation|vocabulary|tone|organisation","explanation":"one short reason"}],"strengths":["2-3 specific strengths"],"tips":["4-6 specific, actionable tips that would raise the level, referencing their text"],"improved":"a rewritten version at ISLPR 4+ that keeps the candidate's ideas and the right format, similar length"}
+List every real error up to 18, most important first. Use \n for line breaks inside strings.

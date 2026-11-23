@@ -4,15 +4,17 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Candidates
+      - uses: actions/checkout@v4
+        with: {ref: probe-ai}
+      - name: Real prompt
         run: |
-          B='{"model":"MODEL","messages":[{"role":"user","content":"Return only this JSON: {\"ok\":true,\"level\":\"3+\"}"}],"max_tokens":60}'
-          try(){ echo; echo "######## $1 ($2)"; curl -sS -m 60 -i "$1" -H 'content-type: application/json' -H 'Origin: https://mamunbracu.github.io' -d "${B/MODEL/$2}" | grep -iE '^HTTP|access-control-allow-origin|ratelimit|retry|^\{' | head -c 1200; echo; }
-          try https://api.llm7.io/v1/chat/completions gpt-4.1-nano
-          try https://api.llm7.io/v1/chat/completions default
-          try https://text.pollinations.ai/openai openai
-          try https://gen.pollinations.ai/v1/chat/completions openai
-          try https://apifreellm.com/api/v1/chat/completions apifreellm
-          try https://mlvoca.com/api/generate deepseek-r1:1.5b
-          echo "######## llm7 models"; curl -sS -m 30 https://api.llm7.io/v1/models | head -c 1500; echo
-          echo "######## OVH again"; curl -sS -m 30 -i https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions -H 'content-type: application/json' -d '{"model":"Mistral-Small-3.2-24B-Instruct-2506","messages":[{"role":"user","content":"OK"}],"max_tokens":5}' | grep -iE '^HTTP|ratelimit|^\{' | head -c 600
+          echo "######## llm7 free-tier models"
+          curl -sS -m 30 https://api.llm7.io/v1/models | jq -r '.data[] | select(.tier!="pro") | "\(.id)  tier=\(.tier) json=\(.json_mode) ctx=\(.context_window.tokens)"' | head -40
+          echo "######## pollinations anonymous models"
+          curl -sS -m 30 https://text.pollinations.ai/models | jq -r '.[] | "\(.name) tier=\(.tier // .anonymous // "")"' 2>/dev/null | head -30
+          run(){ jq -n --rawfile p prompt.txt --arg m "$2" '{model:$m,messages:[{role:"user",content:$p}],temperature:0.3,max_tokens:4000}' > body.json
+            for k in 1 2 3; do s=$(date +%s.%N); code=$(curl -sS -m 150 -o out.json -w '%{http_code}' -D h.txt "$1" -H 'content-type: application/json' -d @body.json); e=$(date +%s.%N)
+              echo "######## $1 $2 call$k http=$code secs=$(echo "$e-$s"|bc) $(grep -iE 'ratelimit-remaining|x-ratelimit|retry-after' h.txt | tr -d '\r' | tr '\n' ' ')"
+              jq -r '.choices[0].message.content // .error.message // .' out.json 2>/dev/null | head -c 900; echo; done; }
+          run https://api.llm7.io/v1/chat/completions default
+          run https://text.pollinations.ai/openai openai
