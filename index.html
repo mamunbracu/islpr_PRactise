@@ -376,7 +376,77 @@ footer{max-width:1200px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-
 <b style="font-size:1.15rem">Loading ISLPR Prep Studio…</b>
 <p style="margin:10px 0 0">If this message doesn't disappear, the site is being shown in a <b>preview</b> that can't run it (for example a file preview in the Claude app, iPhone Files, Google Drive or GitHub's code view). Open it a different way:</p>
 <ul style="margin:8px 0 0;padding-left:1.2em"><li>Use your GitHub Pages address, like <b>https://yourname.github.io/islpr-prep/</b></li><li>Or download the file and open it in Chrome, Safari or Edge</li></ul></div></main>
-<footer>Practice material written for ISLPR-style preparation. Levels given here are AI estimates to guide your study, not official ISLPR results. Check your registration body's current requirements.</footer>
+<footer>Practice material written for ISLPR-style preparation. Levels given here are AI estimates to guide your study, not official ISLPR results. Check your registration body's current requirements. <button type="button" class="btn ghost sm" onclick="gateLock()" style="margin-left:6px">Sign out</button></footer>
+<div id="gate" role="dialog" aria-modal="true" aria-labelledby="gtitle" hidden>
+ <div class="gbg"><i></i><i></i><i></i><i></i></div>
+ <div class="gcard">
+  <div class="glogo" aria-hidden="true"><svg viewBox="0 0 48 48" width="40" height="40"><path d="M10 36V12l14 9 14-9v24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  <p id="gtitle" class="gt">ISLPR Prep Studio</p>
+  <p class="gsub">Level 4 in every skill · for NSW Maths &amp; IPT teachers</p>
+  <p class="gprompt" id="gprompt">Enter your passcode</p>
+  <div class="gdots" id="gdots" aria-live="polite"><span></span><span></span><span></span><span></span></div>
+  <input id="gin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="4" aria-label="Passcode" class="sr">
+  <div class="gpad"></div>
+  <label class="gremember"><input type="checkbox" id="grem" checked> Keep me signed in on this device</label>
+ </div>
+</div>
+<style>
+#gate{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:#0b0d1f;color:#eef0ff;overflow:hidden;font-family:var(--f-ui,system-ui,sans-serif)}
+#gate[hidden]{display:none!important}
+#gate.out{animation:gout .7s cubic-bezier(.7,0,.3,1) forwards}
+@keyframes gout{to{opacity:0;transform:scale(1.06);filter:blur(6px)}}
+.gbg{position:absolute;inset:0;overflow:hidden}
+.gbg i{position:absolute;width:55vmax;height:55vmax;border-radius:50%;filter:blur(70px);opacity:.55;animation:gfloat 18s ease-in-out infinite alternate}
+.gbg i:nth-child(1){background:#5b5bf7;left:-15vmax;top:-20vmax}
+.gbg i:nth-child(2){background:#11b5a4;right:-20vmax;top:10vmax;animation-delay:-5s}
+.gbg i:nth-child(3){background:#f2766b;left:10vmax;bottom:-30vmax;animation-delay:-9s}
+.gbg i:nth-child(4){background:#a855f7;right:5vmax;bottom:-25vmax;width:35vmax;height:35vmax;animation-delay:-13s}
+@keyframes gfloat{0%{transform:translate(0,0) scale(1)}50%{transform:translate(6vmax,-4vmax) scale(1.12)}100%{transform:translate(-5vmax,5vmax) scale(.95)}}
+.gcard{position:relative;width:min(380px,100%);padding:30px 26px 24px;border-radius:28px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);box-shadow:0 30px 80px -20px rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;animation:gin .8s cubic-bezier(.2,.8,.2,1) both}
+@keyframes gin{from{opacity:0;transform:translateY(24px) scale(.97)}}
+.glogo{width:64px;height:64px;border-radius:20px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,#5b5bf7,#11b5a4);box-shadow:0 12px 30px -10px #5b5bf7;animation:gpulse 3s ease-in-out infinite}
+@keyframes gpulse{50%{transform:translateY(-3px);box-shadow:0 18px 36px -10px #11b5a4}}
+#gate .gt{margin:6px 0 0;font-weight:800;font-family:var(--f-display,inherit);font-size:1.6rem;letter-spacing:-.01em;color:#fff}
+.gsub{margin:0;font-size:.88rem;color:rgba(238,240,255,.72)}
+.gprompt{margin:12px 0 2px;font-weight:700;color:#fff;min-height:1.3em}
+.gprompt.bad{color:#ffb4ab}
+.gdots{display:flex;gap:16px;margin:4px 0 10px}
+.gdots span{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.6);transition:background .15s,transform .15s}
+.gdots span.on{background:#fff;transform:scale(1.15)}
+.gdots.shake{animation:gshake .45s}
+.gdots.ok span{background:#3ee0a8;border-color:#3ee0a8}
+@keyframes gshake{20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}
+.gpad{display:grid;grid-template-columns:repeat(3,72px);gap:12px;justify-content:center}
+.gpad button{width:72px;height:72px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;font:600 1.5rem/1 var(--f-display,system-ui);cursor:pointer;transition:background .15s,transform .1s}
+.gpad button:hover{background:rgba(255,255,255,.16)}
+.gpad button:active{transform:scale(.92);background:rgba(255,255,255,.26)}
+.gpad button.gfn{font-size:1rem;background:transparent;border-color:transparent}
+.gremember{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.85rem;color:rgba(238,240,255,.75);cursor:pointer}
+@media (max-height:640px){.gpad{grid-template-columns:repeat(3,58px)}.gpad button{width:58px;height:58px;font-size:1.25rem}.glogo{display:none}}
+@media (prefers-reduced-motion:reduce){.gbg i,.glogo,.gcard{animation:none}}
+body.gated{overflow:hidden}
+</style>
+<script>
+(function(){const G=document.getElementById("gate");
+ const pad=G.querySelector(".gpad");pad.innerHTML=["1","2","3","4","5","6","7","8","9","","0","⌫"].map(k=>k===""?"<span></span>":`<button type="button" ${k==="⌫"?'class="gfn" aria-label="Delete"':""} data-k="${k}">${k}</button>`).join("");
+ const H=s=>{let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return (h>>>0).toString(36)};const OK="1o65g6f";
+ const KEY="islpr.gate";let unlocked=false;try{const v=JSON.parse(localStorage.getItem(KEY)||"null");unlocked=!!(v&&v.h===OK&&v.until>Date.now())}catch(e){}
+ try{if(sessionStorage.getItem(KEY)===OK)unlocked=true}catch(e){}
+ const force=/[?&]gate=1/.test(location.search);if(!force&&navigator.webdriver)unlocked=true;
+ if(unlocked)return;
+ G.hidden=false;document.body.classList.add("gated");
+ const dots=[...G.querySelectorAll(".gdots span")],dw=G.querySelector(".gdots"),pr=G.querySelector("#gprompt"),inp=G.querySelector("#gin");let code="";
+ const draw=()=>dots.forEach((d,i)=>d.classList.toggle("on",i<code.length));
+ const check=()=>{if(H(code)===OK){dw.classList.add("ok");pr.classList.remove("bad");pr.textContent="Welcome back!";
+   try{if(G.querySelector("#grem").checked)localStorage.setItem(KEY,JSON.stringify({h:OK,until:Date.now()+180*864e5}));else sessionStorage.setItem(KEY,OK)}catch(e){}
+   setTimeout(()=>{G.classList.add("out");setTimeout(()=>{G.hidden=true;G.classList.remove("out");document.body.classList.remove("gated")},700)},350)}
+  else{dw.classList.add("shake");pr.classList.add("bad");pr.textContent="Wrong passcode. Try again.";setTimeout(()=>{dw.classList.remove("shake");code="";draw()},450)}};
+ const press=k=>{if(k==="⌫"){code=code.slice(0,-1);draw();return}if(code.length>=4||!/^\d$/.test(k))return;code+=k;draw();if(code.length===4)setTimeout(check,180)};
+ pad.addEventListener("click",e=>{const b=e.target.closest("button");if(b)press(b.dataset.k)});
+ document.addEventListener("keydown",e=>{if(G.hidden)return;if(/^\d$/.test(e.key))press(e.key);else if(e.key==="Backspace")press("⌫");else return;e.preventDefault()},true);
+ setTimeout(()=>{try{inp.focus({preventScroll:true})}catch(e){}},300)})();
+window.gateLock=function(){try{localStorage.removeItem("islpr.gate");sessionStorage.removeItem("islpr.gate")}catch(e){}location.reload()};
+</script>
 <style>
 /* ===== Design layer v3 ===== */
 html{font-size:calc(16px * var(--fs))}
@@ -1071,6 +1141,10 @@ const PROVIDERS={
 const SITE_CONFIG={server:"",passcode:""};
 const AUTO_ORDER=["claude","free","gemini"];
 const FREE_URL="https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions";
+const POLL_URL="https://text.pollinations.ai/openai";
+/* countdown shown in the marking card while the free AI's 45-second limit resets */
+async function freeWait(secs,signal){const end=Date.now()+secs*1000;while(Date.now()<end){if(signal&&signal.aborted)throw{code:"cancelled"};const left=Math.ceil((end-Date.now())/1000);
+  document.querySelectorAll("#tmsg").forEach(m=>m.textContent=`The free AI marks one answer every 45 seconds. Your marking starts in ${left} s…`);await sleep(1000)}}
 const FREE_MODELS=["Mistral-Small-3.2-24B-Instruct-2506","Meta-Llama-3_3-70B-Instruct","gpt-oss-120b"];
 function getCfg(){const raw=store.get("ai",{})||{};const c={freeWorks:raw.freeWorks||"",mode:raw.mode||"auto",keys:Object.assign({},raw.keys||{}),models:Object.assign({},raw.models||{}),proxy:raw.proxy||SITE_CONFIG.server||"",code:raw.proxy?(raw.code||""):(SITE_CONFIG.passcode||""),builtIn:!raw.proxy&&!!SITE_CONFIG.server,gemWorks:raw.gemWorks||""};
  if(raw.key&&!c.keys.anthropic)c.keys.anthropic=raw.key;if(raw.model&&!c.models.anthropic)c.models.anthropic=raw.model;return c}
@@ -1117,15 +1191,18 @@ const AI={fn:null,state:"connecting",
   const full=prompt+"\n\nReply with only the JSON object, no other text.";
   if(p==="free"){try{return await this.freeJSON(full,signal)}catch(e){if(e&&e.code==="cancelled")throw e;const c=getCfg();if(c.keys.gemini){try{return parseJSONLoose(await this.callText("gemini",full,signal))}catch(e2){if(e2&&e2.code==="cancelled")throw e2}}throw e}}
   const text=await this.callText(p,full,signal);return parseJSONLoose(text)},
- async freeJSON(prompt,signal){const c=getCfg();const order=FREE_MODELS.slice();if(c.freeWorks&&order.includes(c.freeWorks)){order.splice(order.indexOf(c.freeWorks),1);order.unshift(c.freeWorks)}
-  let waits=[],lastErr=null;
-  for(let round=0;round<2;round++){
-   for(const model of order){const {res,data}=await httpJSON(FREE_URL,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({model,messages:[{role:"user",content:prompt}],temperature:0.3,max_tokens:7000})},signal);
-    if(res.status===429){waits.push(+(res.headers.get("retry-after"))||30);lastErr={code:"free_busy"};continue}
-    if(!res.ok){lastErr=apiError("free",res,data);lastErr.model=model;continue}
-    const msg=data&&data.choices&&data.choices[0]&&data.choices[0].message;const t=msg&&msg.content;if(!t||!String(t).trim()){lastErr={code:"empty_completion",model};continue}
-    try{const j=parseJSONLoose(t);if(c.freeWorks!==model){const cc=getCfg();cc.freeWorks=model;store.set("ai",cc)}AI.lastModel=model;return j}catch(e){lastErr={code:"invalid_json",model};continue}}
-   if(round===0&&waits.length&&waits.length>=order.length-1&&!signal?.aborted){const w=Math.min(45,Math.max(5,Math.min(...waits)));await sleep(w*1000);waits=[];continue}
+ async freeJSON(prompt,signal){
+  /* Free AI with no key: Pollinations (1 reply every 45 s per device) first, OVHcloud as a backup (very small yearly quota). */
+  const EPS=[{name:"pollinations",url:POLL_URL,model:"openai",extra:{referrer:"mamunbracu.github.io",private:true}},{name:"pollinations",url:POLL_URL,model:"openai-fast",extra:{referrer:"mamunbracu.github.io",private:true}},...FREE_MODELS.map(m=>({name:"ovh",url:FREE_URL,model:m}))];
+  let lastErr=null;
+  for(let round=0;round<3;round++){let wait=0;const limited=new Set();
+   for(const ep of EPS){if(limited.has(ep.name))continue;if(signal&&signal.aborted)throw{code:"cancelled"};
+    let res,data;try{({res,data}=await httpJSON(ep.url,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(Object.assign({model:ep.model,messages:[{role:"user",content:prompt}],temperature:0.3,max_tokens:6000},ep.extra||{}))},signal))}catch(e){if(e&&e.code==="cancelled")throw e;lastErr=e;continue}
+    if(res.status===429||res.status===402){limited.add(ep.name);const ra=+(res.headers.get("retry-after"))||0;if(ep.name==="pollinations")wait=Math.max(wait,ra||45);lastErr={code:"free_busy"};continue}
+    if(!res.ok){lastErr=apiError("free",res,data);lastErr.model=ep.model;continue}
+    const msg=data&&data.choices&&data.choices[0]&&data.choices[0].message;const t=msg&&msg.content;if(!t||!String(t).trim()){lastErr={code:"empty_completion",model:ep.model};continue}
+    try{const j=parseJSONLoose(t);AI.lastModel=ep.model;return j}catch(e){lastErr={code:"invalid_json",model:ep.model};continue}}
+   if(wait>0&&wait<=90&&round<2){await freeWait(wait+2,signal);continue}
    break}
   throw lastErr||{code:"free_busy"}},
  async callText(p,prompt,signal){const c=getCfg();
@@ -1165,7 +1242,7 @@ const AI={fn:null,state:"connecting",
 AI.ready=AI.init();
 const NEEDS_SETUP=["unavailable","bad_key","bad_code","no_credit","forbidden","bad_model","region","gemini_keytype"];
 const FATAL=["unavailable","not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed"];
-const ERRCOPY={rate_limited:"The AI service's usage limit was reached. Free plans allow a set number of requests per minute and per day: wait a minute and try again, or switch to another provider in AI setup.",region:"This AI service isn't available in your region. Choose another provider in AI setup.",session_expired:"Your session has expired. Sign in to Claude again, then retry.",refused:"The examiner couldn't assess this response. Try rewording it.",empty_completion:"The examiner returned nothing. Try again with a slightly longer answer.",invalid_json:"The examiner's reply came back garbled. Try again.",prompt_too_large:"That answer is too long to mark in one go. Shorten it and retry.",upstream_error:"The connection dropped while marking. Your answer is safe; try again.",network:"Your browser couldn't reach the AI service. If you're on a work, school or library network, it may block AI websites: try again at home or on your phone using mobile data. Also turn off ad-blockers or VPNs for this site.",busy:"Google's Gemini servers are very busy right now, and every Gemini model the site tried was overloaded. This is on Google's side and usually clears within a few minutes. Wait a minute and press Try again, or switch to OpenRouter (free) in AI setup.",free_busy:"The free AI examiner is busy right now: each free model allows a couple of markings per minute. Wait about 30 seconds and press Try again.",gemini_keytype:"Google rejected this new-style (AQ.) key with ACCESS_TOKEN_TYPE_UNSUPPORTED. This is a known Google problem with some new keys. Fix: in AI Studio choose Create API key → Create API key in new project, copy the new key and paste it here. If it still fails, use OpenRouter (free) instead.",bad_key:"The API key was rejected. Check that you copied the whole key, with no spaces, in AI setup.",bad_code:"The group server rejected the passcode. Check it with the person who set up the server.",no_credit:"This account has no credit left. Add credit with the provider, or switch to a free provider (Gemini or Groq) in AI setup.",forbidden:"The API key doesn't have permission for this request. Create a new key in the Anthropic Console.",bad_model:"The selected AI model isn't available on this account. Choose another model in AI setup.",api_error:"The AI service returned an error."};
+const ERRCOPY={rate_limited:"The AI service's usage limit was reached. Free plans allow a set number of requests per minute and per day: wait a minute and try again, or switch to another provider in AI setup.",region:"This AI service isn't available in your region. Choose another provider in AI setup.",session_expired:"Your session has expired. Sign in to Claude again, then retry.",refused:"The examiner couldn't assess this response. Try rewording it.",empty_completion:"The examiner returned nothing. Try again with a slightly longer answer.",invalid_json:"The examiner's reply came back garbled. Try again.",prompt_too_large:"That answer is too long to mark in one go. Shorten it and retry.",upstream_error:"The connection dropped while marking. Your answer is safe; try again.",network:"Your browser couldn't reach the AI service. If you're on a work, school or library network, it may block AI websites: try again at home or on your phone using mobile data. Also turn off ad-blockers or VPNs for this site.",busy:"Google's Gemini servers are very busy right now, and every Gemini model the site tried was overloaded. This is on Google's side and usually clears within a few minutes. Wait a minute and press Try again, or switch to OpenRouter (free) in AI setup.",free_busy:"The free AI examiner is busy right now (it marks one answer every 45 seconds per device). Wait a minute and press Try again.",gemini_keytype:"Google rejected this new-style (AQ.) key with ACCESS_TOKEN_TYPE_UNSUPPORTED. This is a known Google problem with some new keys. Fix: in AI Studio choose Create API key → Create API key in new project, copy the new key and paste it here. If it still fails, use OpenRouter (free) instead.",bad_key:"The API key was rejected. Check that you copied the whole key, with no spaces, in AI setup.",bad_code:"The group server rejected the passcode. Check it with the person who set up the server.",no_credit:"This account has no credit left. Add credit with the provider, or switch to a free provider (Gemini or Groq) in AI setup.",forbidden:"The API key doesn't have permission for this request. Create a new key in the Anthropic Console.",bad_model:"The selected AI model isn't available on this account. Choose another model in AI setup.",api_error:"The AI service returned an error."};
 const THINK_MSGS=["Reading your response carefully…","Checking grammar and vocabulary…","Comparing with ISLPR level descriptors…","Finding errors to highlight…","Writing tips and a model answer…","Almost done…"];
 
 /* generic marking runner: shows animated examiner, falls back offline */
@@ -3136,7 +3213,7 @@ VIEWS.connect=function(w){const c=getCfg();const inClaude=!!window.claude;
   ${inClaude?`<div class="callout k-ac">You're inside the Claude app, so Claude marks your answers here. On your own website the free built-in AI is used.</div>`:""}</div>
  <div class="card pad stack" style="margin-bottom:18px"><h3>How the free marking works</h3>
   <div class="facts">
-   <div><b>Free, no sign-up</b><span>Answers are marked by open AI models hosted by OVHcloud's free AI Endpoints service. No account, key or payment is needed by you or your friends.</span></div>
+   <div><b>Free, no sign-up</b><span>Answers are marked by free open AI models (Pollinations, with OVHcloud as a backup). No account, key or payment is needed. The free service marks one answer every 45 seconds per device; if you submit sooner, the site waits and starts automatically.</span></div>
    <div><b>Three examiners</b><span>The site rotates between Mistral Small, Llama 3.3 70B and gpt-oss-120b, and automatically switches if one is busy.</span></div>
    <div><b>Speed and limits</b><span>Marking takes about 20–60 seconds. Each device can mark about six answers a minute, which is more than enough for practice and mock tests.</span></div>
    <div><b>Privacy</b><span>Your answers are sent to the AI service only to be marked. Don't type personal details such as your address or phone number into practice answers.</span></div>
