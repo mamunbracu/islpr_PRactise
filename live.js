@@ -1,0 +1,10 @@
+const {chromium}=require('playwright');
+(async()=>{const b=await chromium.launch();const p=await b.newPage({viewport:{width:1280,height:900}});const errs=[];p.on('pageerror',e=>errs.push(e.message));
+const net=[];p.on('response',r=>{if(/pollinations|kepler/.test(r.url()))net.push(r.status()+' '+r.url().slice(0,60))});
+await p.goto('https://mamunbracu.github.io/islpr_PRactise/?gate=1&v='+Date.now());await p.waitForTimeout(1500);
+console.log('GATE visible:',await p.isVisible('#gate'));await p.keyboard.type('1535');await p.waitForTimeout(1500);console.log('GATE after 1535:',await p.isVisible('#gate'));
+await p.evaluate(()=>{navigate('writing');UI.writing=WRITING.find(t=>/calculator/i.test(t.title)).id;rerender()});await p.waitForSelector('#essay');
+await p.fill('#essay',"Dear Mr Patel,\n\nI am writing to ask for money to buy graphics calculators for Year 11. At the moment we only have twelve calculators but there is twenty-eight students, so they has to share and cannot practise at home. We need thirty calculators, it cost about $2,850. This is urgent because the assessment task is in Week 5 and students need time to learn how to use them.\n\nI would be grateful if you could approve this before the end of term.\n\nYours sincerely,\nSam Ahmed\nMathematics Teacher");
+const t=Date.now();await p.click('#sub');await p.waitForSelector('.result-head',{timeout:150000});
+console.log('MARKED in',((Date.now()-t)/1000).toFixed(1),'s');console.log('RESULT:',(await p.textContent('#wres')).replace(/\s+/g,' ').slice(0,700));
+console.log('NET',net.join(' | '));console.log('ERRORS',errs.join(' | '));await p.screenshot({path:'live.png',fullPage:false});await b.close()})();

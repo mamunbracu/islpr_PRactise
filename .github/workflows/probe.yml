@@ -1,16 +1,10 @@
 name: probe-ai
 on: push
 jobs:
-  probe:
+  live:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with: {ref: probe-ai}
-      - name: Pollinations real prompts back to back
-        run: |
-          for m in openai openai-fast; do for i in 0 1 2; do
-            jq -n --rawfile p p$i.txt --arg m "$m" --arg n "$RANDOM$i" '{model:$m,messages:[{role:"user",content:($p+"\n(ref "+$n+")")}],temperature:0.3,max_tokens:4000,referrer:"mamunbracu.github.io"}' > body.json
-            s=$(date +%s.%N); code=$(curl -sS -m 180 -o out.json -w '%{http_code}' -D h.txt https://text.pollinations.ai/openai -H 'content-type: application/json' -H 'Origin: https://mamunbracu.github.io' -H 'Referer: https://mamunbracu.github.io/islpr_PRactise/' -d @body.json); e=$(date +%s.%N)
-            echo "######## $m prompt$i http=$code secs=$(echo "$e-$s"|bc) model=$(jq -r .model out.json 2>/dev/null) tier=$(jq -r .user_tier out.json 2>/dev/null) $(grep -iE 'retry|limit' h.txt | tr -d '\r' | tr '\n' ' ')"
-            jq -r '.choices[0].message.content // .error.message // .' out.json 2>/dev/null | head -c 700; echo
-          done; done
+      - run: npm i playwright@1.49.1 && npx playwright install --with-deps chromium
+      - run: node live.js
