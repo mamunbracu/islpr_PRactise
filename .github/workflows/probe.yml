@@ -4,15 +4,15 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Free OVH endpoint
+      - name: Candidates
         run: |
-          for m in Mistral-Small-3.2-24B-Instruct-2506 Meta-Llama-3_3-70B-Instruct gpt-oss-120b; do
-            echo "=== $m"
-            curl -sS -m 60 -i https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions \
-              -H 'content-type: application/json' -H 'Origin: https://mamunbracu.github.io' \
-              -d "{\"model\":\"$m\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply with the word OK\"}],\"max_tokens\":20}" | head -c 1500; echo
-          done
-          echo "=== models list"
-          curl -sS -m 30 https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/models | head -c 3000; echo
-          echo "=== catalog"
-          curl -sS -m 30 "https://catalog.endpoints.ai.ovh.net/rest/v1/models_v2?order=id" | head -c 4000; echo
+          B='{"model":"MODEL","messages":[{"role":"user","content":"Return only this JSON: {\"ok\":true,\"level\":\"3+\"}"}],"max_tokens":60}'
+          try(){ echo; echo "######## $1 ($2)"; curl -sS -m 60 -i "$1" -H 'content-type: application/json' -H 'Origin: https://mamunbracu.github.io' -d "${B/MODEL/$2}" | grep -iE '^HTTP|access-control-allow-origin|ratelimit|retry|^\{' | head -c 1200; echo; }
+          try https://api.llm7.io/v1/chat/completions gpt-4.1-nano
+          try https://api.llm7.io/v1/chat/completions default
+          try https://text.pollinations.ai/openai openai
+          try https://gen.pollinations.ai/v1/chat/completions openai
+          try https://apifreellm.com/api/v1/chat/completions apifreellm
+          try https://mlvoca.com/api/generate deepseek-r1:1.5b
+          echo "######## llm7 models"; curl -sS -m 30 https://api.llm7.io/v1/models | head -c 1500; echo
+          echo "######## OVH again"; curl -sS -m 30 -i https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions -H 'content-type: application/json' -d '{"model":"Mistral-Small-3.2-24B-Instruct-2506","messages":[{"role":"user","content":"OK"}],"max_tokens":5}' | grep -iE '^HTTP|ratelimit|^\{' | head -c 600
