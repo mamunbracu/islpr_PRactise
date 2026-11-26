@@ -1,0 +1,19 @@
+name: probe
+on: push
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          B='{"model":"MODEL","messages":[{"role":"user","content":"Reply with only this JSON: {\"ok\":true}"}],"referrer":"mamunbracu.github.io"}'
+          probe(){ echo "=== $1 $2"; curl -s -m 60 -D h.txt -o b.txt -w "code=%{http_code} t=%{time_total}\n" -H 'content-type: application/json' -H 'Origin: https://mamunbracu.github.io' -X POST "$1" -d "${B/MODEL/$2}"; grep -i 'access-control-allow-origin\|retry-after\|ratelimit' h.txt; head -c 400 b.txt; echo; }
+          for i in 1 2 3; do probe https://text.pollinations.ai/openai openai; done
+          probe https://text.pollinations.ai/openai openai-fast
+          probe https://gen.pollinations.ai/v1/chat/completions openai
+          probe https://api.llm7.io/v1/chat/completions gpt-4.1-nano
+          probe https://api.llm7.io/v1/chat/completions mistral-small-3.1-24b-instruct-2503
+          probe https://api.llm7.io/v1/chat/completions default
+          sleep 3
+          for i in 1 2 3; do probe https://api.llm7.io/v1/chat/completions gpt-4.1-nano; done
+          curl -s -m 30 https://api.llm7.io/v1/models | head -c 1500; echo
+          curl -s -m 30 https://text.pollinations.ai/models | head -c 800
