@@ -1,0 +1,62 @@
+You are an ISLPR reading examiner. The candidate read this passage silently, then gave a spoken summary and answered the examiner's questions orally. Their spoken responses were transcribed (dictated or typed), so ignore capitalisation and minor punctuation; focus on meaning and spoken accuracy.
+ISLPR scale (low→high): 0, 0+, 1-, 1, 1+, 2, 2+, 3, 3+, 4, 4+, 5. Level 4 = vocational: fluent and accurate for professional use with minor errors; 4+ = advanced vocational; 3 = basic vocational with clear but limited, uneven language; 2 = basic social. Be calibrated and honest: do not inflate. Short or off-task responses cannot score above 2+.
+Assess: Comprehension (grasped main idea and details), Summarising (key points in own words; penalise long phrases copied word-for-word from the passage), Q&A response (accurate, shows understanding not guesswork), Language (grammar and vocabulary in their responses).
+PASSAGE "Help for parents struggling with back-to-school costs":
+For many families, the start of the school year arrives at the worst possible time. Straight after the expense of Christmas and New Year, parents must pay for new uniforms, shoes, hats, books and stationery.
+
+Courtney Jarvis is one parent feeling the pressure. She says the cost of basic items such as school shirts, shorts and hats is difficult to manage so soon after the holidays. Her situation is harder because her son Silvester, who is starting preschool, has muscular dystrophy, a condition that brings significant extra costs.
+
+In North Queensland, help is available through School Savvy, a program run by Centacare NQ. It allows parents to buy uniforms and school supplies at low prices. Last year the program assisted 2,500 families, and this year it is expanding to the Burdekin, Mount Isa and Cloncurry regions.
+
+Centacare says demand for discounted school supplies has grown this year because the high cost of living is putting real pressure on households. Parent Maria Tracey is one of those who benefited. The program saved her a couple of hundred dollars, which she says makes a big difference when everyday prices keep rising.
+
+Another response has come from the community itself. In 2020, Alison Schutt and her husband Jan started a charity called Stationery Aid. The idea came from their own home: their children kept bringing back exercise books and stationery that had hardly been used, yet no organisation would accept them as donations.
+
+Stationery Aid now collects used exercise books and stationery and gives them a second life. Volunteers remove the used pages and students' names, then repair or cover the books so they look new before passing them on to students in need.
+
+The couple considered sending the items overseas, but decided to focus on Australian students because the need in their own community is so great. Stationery Aid estimates that about one per cent of Queensland students need some help to start the school year with the basic equipment they require.
+
+Local sewing groups also contribute, making fabric pencil cases and library bags so that students receive a complete set of supplies.
+KEY POINTS a strong summary covers: Back-to-school costs are a heavy burden for families straight after Christmas | Centacare NQ's School Savvy program sells cheap uniforms and supplies and is expanding | Families such as Maria Tracey's save hundreds of dollars | Stationery Aid refurbishes leftover exercise books for local students in need | Demand is rising because of the high cost of living
+QUESTIONS and reference answers:
+1. What is Courtney Jarvis struggling with as the back-to-school shopping season begins? — reference: Courtney Jarvis is struggling with the high cost of back-to-school items like shirts, shorts and hats. Prices are hard to manage right after Christmas and New Year.
+2. What additional challenges does Courtney Jarvis face with her son Silvester starting preschool? — reference: Courtney Jarvis has extra costs because her son Silvester has muscular dystrophy, which is expensive to manage.
+3. What is the School Savvy program, and who runs it? — reference: The School Savvy program helps parents buy cheap uniforms and school supplies. It is run by Centacare NQ.
+4. How many families did the School Savvy program help last year? — reference: The School Savvy program helped 2,500 families last year.
+5. In which regions is the School Savvy program expanding this year? — reference: This year, the program is expanding to the Burdekin, Mount Isa and Cloncurry regions.
+6. How does the School Savvy program help parents like Maria Tracey? — reference: The program helps parents like Maria Tracey spend less money on new school items.
+7. Why did Maria Tracey find the School Savvy program particularly helpful? — reference: Maria Tracey found the program helpful because it saved her a couple of hundred dollars, which matters a lot with the high cost of living.
+8. What did Alison Schutt and her husband Jan start in 2020, and why? — reference: Alison Schutt and her husband Jan started Stationery Aid in 2020 to reuse leftover exercise books and stationery from their children's school supplies.
+9. What inspired Alison Schutt to start Stationery Aid? — reference: Alison Schutt started Stationery Aid when her children brought home leftover books and stationery that no group would take.
+10. What does Stationery Aid do with leftover exercise books and stationery? — reference: Stationery Aid collects used exercise books and stationery, removes old pages and names, and fixes the covers so they look new for students in need.
+11. Why did Alison Schutt and her husband decide to focus on helping students in Australia rather than sending items overseas? — reference: They decided to help students in Australia because there is a huge need for this help in their own community.
+12. How many Queensland students does Stationery Aid estimate need assistance to start the school year? — reference: Stationery Aid thinks about 1 per cent of Queensland students need some help to start the school year.
+13. What process does Stationery Aid follow to ensure used books look new? — reference: Stationery Aid removes old pages and names from used books and fixes the covers so they look new.
+14. What additional items do sewing groups contribute to Stationery Aid? — reference: Sewing groups give Stationery Aid fabric pencil cases and library bags for students.
+15. Why did Centacare notice an increased demand for discounted school supplies this year? — reference: Centacare saw more demand for cheap school supplies this year because of the high cost of living, which is putting pressure on families.
+CANDIDATE SUMMARY (between <<< >>>):
+<<<
+(no summary given)
+>>>
+CANDIDATE ANSWERS:
+1. <<<Courtney Jarvis is struggling with the high cost of.>>>
+2. <<<Courtney Jarvis has extra costs because her son Silvester.>>>
+3. <<<The School Savvy program helps parents buy cheap uniforms.>>>
+4. <<<The School Savvy program helped 2,500 families last year..>>>
+5. <<<This year, the program is expanding to the Burdekin,.>>>
+6. <<<The program helps parents like Maria Tracey spend less.>>>
+7. <<<Maria Tracey found the program helpful because it saved.>>>
+8. <<<Alison Schutt and her husband Jan started Stationery Aid.>>>
+9. <<<(no answer)>>>
+10. <<<(no answer)>>>
+11. <<<(no answer)>>>
+12. <<<(no answer)>>>
+13. <<<(no answer)>>>
+14. <<<(no answer)>>>
+15. <<<(no answer)>>>
+Reply with only JSON:
+{"level":"3+","summary":"2 sentence overall judgement addressed to 'you'","criteria":[{"name":"Comprehension","level":"","comment":""},{"name":"Summarising","level":"","comment":""},{"name":"Q&A response","level":"","comment":""},{"name":"Language","level":"","comment":""}],"keyPoints":[{"point":"each key point","covered":true}],"copied":["phrases copied verbatim from the source, if any"],"questions":[{"verdict":"correct|partial|incorrect","feedback":"one or two sentences","model":"an ideal natural spoken answer"}],"errors":[{"original":"exact short span (1-8 words) copied character-for-character from the candidate SUMMARY","correction":"corrected span","type":"grammar|spelling|punctuation|vocabulary|tone|organisation","explanation":"one short reason"}],"modelSummary":"a natural spoken model summary of 60-90 words at level 4+","tips":["3-5 specific tips for this skill"]}
+NOTE: This is a question-and-answer set. The candidate chose not to give a summary, so do not penalise the missing summary heavily: base the overall level mainly on the answers to the questions (accuracy, full sentences, own words, grammar). Mark keyPoints as not covered.
+Mark each answer generously for meaning: a correct answer in different words is "correct". Use the reference answer as the model when the candidate's answer is weak.
+
+Reply with only the JSON object, no other text.

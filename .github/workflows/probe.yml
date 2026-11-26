@@ -4,13 +4,24 @@ jobs:
   p:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with: {ref: probe-ai2}
       - run: |
-          LONG=$(python3 -c "print(('The candidate answered the reading question about school costs in a full sentence. '*120).replace('\"',''))")
-          probe(){ echo "=== $(date +%T) $1 mt=$2"; curl -s -m 120 -D h.txt -o b.txt -w "code=%{http_code} t=%{time_total}\n" -H 'content-type: application/json' -H 'Origin: https://mamunbracu.github.io' -H 'Referer: https://mamunbracu.github.io/' -X POST https://text.pollinations.ai/openai -d "{\"model\":\"openai\",\"messages\":[{\"role\":\"user\",\"content\":\"$RANDOM $1 Mark this and reply with JSON {\\\"level\\\":\\\"3+\\\",\\\"tips\\\":[..3 tips]}. $3\"}],\"max_tokens\":$2,\"referrer\":\"mamunbracu.github.io\",\"private\":true}"; grep -i 'retry-after\|ratelimit\|x-queue' h.txt; head -c 250 b.txt; echo; }
-          probe short1 6000 ""
-          probe short2 6000 ""
-          sleep 20; probe after20 6000 ""
-          sleep 45; probe after45 6000 ""
-          sleep 50; probe long 6000 "$LONG"
-          sleep 50; probe long_mt2000 2000 "$LONG"
-          sleep 50; probe nomax 0 "$LONG"
+          python3 - <<'PY'
+          import json,urllib.request,time,re
+          pr=open('prompt.txt').read()
+          for mt in [6000,None]:
+            body={"model":"openai","messages":[{"role":"user","content":pr}],"temperature":0.3,"referrer":"mamunbracu.github.io","private":True}
+            if mt: body["max_tokens"]=mt
+            t=time.time()
+            try:
+              r=urllib.request.urlopen(urllib.request.Request("https://text.pollinations.ai/openai",data=json.dumps(body).encode(),headers={"content-type":"application/json","Origin":"https://mamunbracu.github.io"}),timeout=180)
+              d=json.load(r);c=d["choices"][0]["message"].get("content") or ""
+              print("mt",mt,"ok",round(time.time()-t,1),"s len",len(c),"finish",d["choices"][0].get("finish_reason"),d.get("usage"))
+              s=c[c.find("{"):c.rfind("}")+1]
+              try: j=json.loads(s); print("JSON OK keys",list(j)[:12], "questions",len(j.get("questions",[])))
+              except Exception as e: print("JSON FAIL",e); print(c[:600]); print("...",c[-400:])
+            except Exception as e:
+              print("mt",mt,"ERR",e, getattr(e,'read',lambda:b'')()[:300])
+            time.sleep(50)
+          PY
