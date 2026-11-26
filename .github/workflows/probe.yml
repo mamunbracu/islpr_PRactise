@@ -5,15 +5,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          B='{"model":"MODEL","messages":[{"role":"user","content":"Reply with only this JSON: {\"ok\":true}"}],"referrer":"mamunbracu.github.io"}'
-          probe(){ echo "=== $1 $2"; curl -s -m 60 -D h.txt -o b.txt -w "code=%{http_code} t=%{time_total}\n" -H 'content-type: application/json' -H 'Origin: https://mamunbracu.github.io' -X POST "$1" -d "${B/MODEL/$2}"; grep -i 'access-control-allow-origin\|retry-after\|ratelimit' h.txt; head -c 400 b.txt; echo; }
-          for i in 1 2 3; do probe https://text.pollinations.ai/openai openai; done
-          probe https://text.pollinations.ai/openai openai-fast
-          probe https://gen.pollinations.ai/v1/chat/completions openai
-          probe https://api.llm7.io/v1/chat/completions gpt-4.1-nano
-          probe https://api.llm7.io/v1/chat/completions mistral-small-3.1-24b-instruct-2503
-          probe https://api.llm7.io/v1/chat/completions default
-          sleep 3
-          for i in 1 2 3; do probe https://api.llm7.io/v1/chat/completions gpt-4.1-nano; done
-          curl -s -m 30 https://api.llm7.io/v1/models | head -c 1500; echo
-          curl -s -m 30 https://text.pollinations.ai/models | head -c 800
+          LONG=$(python3 -c "print(('The candidate answered the reading question about school costs in a full sentence. '*120).replace('\"',''))")
+          probe(){ echo "=== $(date +%T) $1 mt=$2"; curl -s -m 120 -D h.txt -o b.txt -w "code=%{http_code} t=%{time_total}\n" -H 'content-type: application/json' -H 'Origin: https://mamunbracu.github.io' -H 'Referer: https://mamunbracu.github.io/' -X POST https://text.pollinations.ai/openai -d "{\"model\":\"openai\",\"messages\":[{\"role\":\"user\",\"content\":\"$RANDOM $1 Mark this and reply with JSON {\\\"level\\\":\\\"3+\\\",\\\"tips\\\":[..3 tips]}. $3\"}],\"max_tokens\":$2,\"referrer\":\"mamunbracu.github.io\",\"private\":true}"; grep -i 'retry-after\|ratelimit\|x-queue' h.txt; head -c 250 b.txt; echo; }
+          probe short1 6000 ""
+          probe short2 6000 ""
+          sleep 20; probe after20 6000 ""
+          sleep 45; probe after45 6000 ""
+          sleep 50; probe long 6000 "$LONG"
+          sleep 50; probe long_mt2000 2000 "$LONG"
+          sleep 50; probe nomax 0 "$LONG"
