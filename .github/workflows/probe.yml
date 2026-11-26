@@ -8,20 +8,20 @@ jobs:
         with: {ref: probe-ai2}
       - run: |
           python3 - <<'PY'
-          import json,urllib.request,time,re
-          pr=open('prompt.txt').read()
-          for mt in [6000,None]:
-            body={"model":"openai","messages":[{"role":"user","content":pr}],"temperature":0.3,"referrer":"mamunbracu.github.io","private":True}
-            if mt: body["max_tokens"]=mt
-            t=time.time()
-            try:
-              r=urllib.request.urlopen(urllib.request.Request("https://text.pollinations.ai/openai",data=json.dumps(body).encode(),headers={"content-type":"application/json","Origin":"https://mamunbracu.github.io"}),timeout=180)
-              d=json.load(r);c=d["choices"][0]["message"].get("content") or ""
-              print("mt",mt,"ok",round(time.time()-t,1),"s len",len(c),"finish",d["choices"][0].get("finish_reason"),d.get("usage"))
-              s=c[c.find("{"):c.rfind("}")+1]
-              try: j=json.loads(s); print("JSON OK keys",list(j)[:12], "questions",len(j.get("questions",[])))
-              except Exception as e: print("JSON FAIL",e); print(c[:600]); print("...",c[-400:])
-            except Exception as e:
-              print("mt",mt,"ERR",e, getattr(e,'read',lambda:b'')()[:300])
-            time.sleep(50)
+          import json,urllib.request,time
+          P=json.load(open('prompts.json'))
+          for k,pr in P.items():
+            for attempt in range(2):
+              body={"model":"openai","messages":[{"role":"user","content":pr}],"temperature":0.3,"max_tokens":6000,"referrer":"mamunbracu.github.io","private":True}
+              t=time.time()
+              try:
+                d=json.load(urllib.request.urlopen(urllib.request.Request("https://text.pollinations.ai/openai",data=json.dumps(body).encode(),headers={"content-type":"application/json"}),timeout=180))
+                c=d["choices"][0]["message"].get("content") or "";fr=d["choices"][0].get("finish_reason")
+                s=c[c.find("{"):c.rfind("}")+1]
+                try: j=json.loads(s); res="JSON OK keys=%s"%list(j)[:10]
+                except Exception as e: res="JSON FAIL %s"%e
+                print(k,"finish",fr,"tok",d.get("usage",{}).get("completion_tokens"),round(time.time()-t,1),"s",res); print("   ",c[:300].replace("\n"," "))
+              except Exception as e: print(k,"ERR",e)
+              time.sleep(50)
+              if 'OK' in res: break
           PY
