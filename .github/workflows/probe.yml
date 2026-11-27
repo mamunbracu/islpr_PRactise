@@ -10,5 +10,3 @@ jobs:
       - uses: actions/checkout@v4
         with: {ref: probe-ai2}
       - run: python3 gen.py ${{ matrix.j }} 16
-      - uses: actions/upload-artifact@v4
-        with: {name: "out${{ matrix.j }}", path: "out${{ matrix.j }}.json"}

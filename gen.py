@@ -29,5 +29,6 @@ Reply with ONLY this JSON: {fmt}"""
   r=ask(p)
   if r and r.get("summary"):out[it["id"]]=r;print("ok",it["id"],len(r["summary"].split()),"words",flush=True)
   else:print("FAILED",it["id"],flush=True)
-  time.sleep(46)
+import base64
 json.dump(out,open(f"out{J}.json","w"),ensure_ascii=False)
+print("B64OUT",base64.b64encode(json.dumps(out).encode()).decode(),flush=True)
