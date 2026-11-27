@@ -1,27 +1,14 @@
-name: probe
+name: gen
 on: push
 jobs:
-  p:
+  g:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: {j: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]}
     steps:
       - uses: actions/checkout@v4
         with: {ref: probe-ai2}
-      - run: |
-          python3 - <<'PY'
-          import json,urllib.request,time
-          P=json.load(open('prompts.json'))
-          for k,pr in P.items():
-            for attempt in range(2):
-              body={"model":"openai","messages":[{"role":"user","content":pr}],"temperature":0.3,"max_tokens":6000,"referrer":"mamunbracu.github.io","private":True}
-              t=time.time()
-              try:
-                d=json.load(urllib.request.urlopen(urllib.request.Request("https://text.pollinations.ai/openai",data=json.dumps(body).encode(),headers={"content-type":"application/json"}),timeout=180))
-                c=d["choices"][0]["message"].get("content") or "";fr=d["choices"][0].get("finish_reason")
-                s=c[c.find("{"):c.rfind("}")+1]
-                try: j=json.loads(s); res="JSON OK keys=%s"%list(j)[:10]
-                except Exception as e: res="JSON FAIL %s"%e
-                print(k,"finish",fr,"tok",d.get("usage",{}).get("completion_tokens"),round(time.time()-t,1),"s",res); print("   ",c[:300].replace("\n"," "))
-              except Exception as e: print(k,"ERR",e)
-              time.sleep(50)
-              if 'OK' in res: break
-          PY
+      - run: python3 gen.py ${{ matrix.j }} 16
+      - uses: actions/upload-artifact@v4
+        with: {name: "out${{ matrix.j }}", path: "out${{ matrix.j }}.json"}
