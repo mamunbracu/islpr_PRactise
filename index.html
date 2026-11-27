@@ -4862,6 +4862,53 @@ const S4={"rx38": {"summary": "This passage is about the decline of cash and the
 })();
 </script>
 <script>
+/* ===== Previous / Next on every practice item (reading, listening, writing, speaking) ===== */
+(function(){
+ const LISTS={reading:"listReading",listening:"listListening",writing:"listWriting",speaking:"listSpeaking"};
+ const ARR={reading:()=>READING,listening:()=>LISTENING,writing:()=>WRITING,speaking:()=>SPEAKING};
+ const NOUN={reading:"passage",listening:"clip",writing:"task",speaking:"topic"};
+ function seqFor(route,id){let ids=[];const tmp=document.createElement("div");tmp.hidden=true;document.body.appendChild(tmp);
+  try{window[LISTS[route]](tmp);ids=[...tmp.querySelectorAll(".items .item[data-id]")].map(b=>b.dataset.id)}catch(e){}tmp.remove();
+  if(ids.includes(id))return ids;
+  const cur=byId(ARR[route](),id)||{};
+  return ARR[route]().filter(x=>!/^(qa|m[a-z]-)/.test(x.id)&&(route!=="reading"||x.type===cur.type)).map(x=>x.id)}
+ function navHTML(route,prev,next,pos,total,where){const it=id=>byId(ARR[route](),id)||{};
+  return `<nav class="itemnav ${where}" aria-label="Previous and next ${NOUN[route]}">
+   <button class="btn" type="button" data-go="${prev||""}" ${prev?"":"disabled"}>${ic("left",16)}<span><small>Previous</small>${prev?esc(it(prev).title||""):"–"}</span></button>
+   <span class="note mono">${pos} / ${total}</span>
+   <button class="btn ${where==="bottom"?"primary":""}" type="button" data-go="${next||""}" ${next?"":"disabled"}><span><small>Next ${NOUN[route]}</small>${next?esc(it(next).title||""):"–"}</span>${ic("right",16)}</button></nav>`}
+ Object.keys(LISTS).forEach(route=>{const _v=VIEWS[route];VIEWS[route]=function(w){const r=_v(w);try{
+   const id=UI[route];if(!id||/^m[a-z]-/.test(id)||/mock/.test(location.hash))return r;
+   const qm=/^qa([wsrl])(\d+)$/.exec(id);
+   if(qm){/* Q&A practice: step through the Q&A bank in order */
+    const skill={w:"writing",s:"speaking",r:"reading",l:"listening"}[qm[1]];const n=+qm[2];const bank=(typeof QA!=="undefined"&&QA[skill])||[];if(bank.length<2)return r;
+    const lab=k=>bank[k]?bank[k][0]:"";
+    const html=where=>`<nav class="itemnav ${where}" aria-label="Previous and next question"><button class="btn" type="button" data-q="${n-1}" ${n>0?"":"disabled"}>${ic("left",16)}<span><small>Previous</small>${n>0?esc(lab(n-1)):"–"}</span></button><span class="note mono">${n+1} / ${bank.length}</span><button class="btn ${where==="bottom"?"primary":""}" type="button" data-q="${n+1}" ${n+1<bank.length?"":"disabled"}><span><small>Next question</small>${n+1<bank.length?esc(lab(n+1)):"–"}</span>${ic("right",16)}</button></nav>`;
+    const back=$(".back",w);if(back)back.insertAdjacentHTML("afterend",html("top"));w.insertAdjacentHTML("beforeend",html("bottom"));
+    $$(".itemnav button[data-q]",w).forEach(b=>b.onclick=()=>{const k=+b.dataset.q;if(!(k>=0&&k<bank.length))return;try{TTS.stop()}catch(e){}try{window.STT&&STT.stop&&STT.stop()}catch(e){}qaPractise(skill,k)});
+    return r}
+   const seq=seqFor(route,id);const i=seq.indexOf(id);if(i<0||seq.length<2)return r;
+   const prev=seq[i-1],next=seq[i+1];
+   const back=$(".back",w);if(back)back.insertAdjacentHTML("afterend",navHTML(route,prev,next,i+1,seq.length,"top"));
+   w.insertAdjacentHTML("beforeend",navHTML(route,prev,next,i+1,seq.length,"bottom"));
+   $$(".itemnav button[data-go]",w).forEach(b=>b.onclick=()=>{const to=b.dataset.go;if(!to)return;try{TTS.stop()}catch(e){}try{window.STT&&STT.stop&&STT.stop()}catch(e){}UI[route]=to;rerender()});
+  }catch(e){}return r}});
+})();
+</script>
+<style>
+.itemnav{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:10px;align-items:center;margin:4px 0 18px}
+.itemnav.bottom{margin:28px 0 8px;padding-top:18px;border-top:1px solid var(--line)}
+.itemnav .btn{min-width:0;justify-content:flex-start;text-align:left;gap:8px;padding-block:10px}
+.itemnav .btn:last-child{justify-content:flex-end;text-align:right}
+.itemnav .btn span{min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.itemnav .btn small{font-size:.72rem;opacity:.75;text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.itemnav .btn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.itemnav .btn span>small{white-space:nowrap}
+.itemnav .btn[disabled]{opacity:.45;cursor:default}
+.itemnav .note{text-align:center;white-space:nowrap}
+@media (max-width:520px){.itemnav .btn span{font-size:.85rem}}
+</style>
+<script>
 /* accordions: only one open at a time within the same group */
 document.addEventListener("toggle",e=>{const d=e.target;if(!(d instanceof HTMLDetailsElement)||!d.open||!d.isConnected)return;const p=d.parentElement;if(!p)return;
  p.querySelectorAll(":scope > details[open]").forEach(o=>{if(o!==d)o.open=false})},true);
