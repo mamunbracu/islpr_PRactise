@@ -3309,7 +3309,7 @@ function listeningClip(w,item,opts){const exam=!!opts.exam;const words=wc(item.l
  play.onclick=()=>{
   if(playing){ctl&&ctl.stop();playing=false;setPlaying(false);if(examMode){play.disabled=true;showForm()}return}
   if(examMode&&plays>0)return;
-  if(!TTS.ok){readOnceFallback();return}
+  if(!TTS.ok&&!(window.AUDIO&&AUDIO.can(item.lines))){readOnceFallback();return}
   plays++;playing=true;setPlaying(true);pb.style.width="0";
   ctl=TTS.play(item.lines,{rate:exam?1:+(($("#rate",w)||{}).value||1),onProgress:p=>pb.style.width=(p*100)+"%",onEnd:()=>{playing=false;setPlaying(false);pb.style.width="100%";if(examMode)play.disabled=true;showForm()}})};
  function readOnceFallback(){plays++;play.disabled=true;const secs=Math.max(15,Math.round(words/2.6));const pl=$("#pl",w);
@@ -4908,6 +4908,37 @@ const S4={"rx38": {"summary": "This passage is about the decline of cash and the
 .itemnav .note{text-align:center;white-space:nowrap}
 @media (max-width:520px){.itemnav .btn span{font-size:.85rem}}
 </style>
+<script>
+/* ===== Studio news-reader voices: pre-recorded neural audio for every listening clip, with a voice picker ===== */
+const AUDIO={has:new Set(),ready:false,
+ PRESETS:[["emma","Emma · British female (BBC style)"],["george","George · British male (BBC style)"],["isabella","Isabella · British female"],["fable","Fable · British male"],["device","Australian · your device's voice"]],
+ key(lines){const s=lines.map(l=>l.s+":"+String(l.t).trim()).join("\n");let h=0x811c9dc5;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0}return h.toString(36)},
+ preset(){let v="emma";try{v=store.get("lvoice","emma")||"emma"}catch(e){}return v},
+ can(lines){if(!this.has.size)return false;const p=this.preset()==="device"?"emma":this.preset();return this.has.has(this.key(lines)+"-"+p)},
+ load(){if(!/^https?:/.test(location.protocol))return;fetch("audio/index.json",{cache:"no-cache"}).then(r=>r.ok?r.json():[]).then(a=>{(a||[]).forEach(k=>this.has.add(k));this.ready=true;document.dispatchEvent(new Event("audio-ready"))}).catch(()=>{})}};
+AUDIO.load();
+(function(){const _play=TTS.play.bind(TTS);
+ TTS.play=function(lines,opts={}){const pre=AUDIO.preset();if(pre==="device"||!AUDIO.has.size)return _play(lines,opts);
+  const k=AUDIO.key(lines)+"-"+pre;if(!AUDIO.has.has(k))return _play(lines,opts);
+  this.stop();const {rate=1,onProgress,onEnd}=opts;const a=new Audio("audio/"+k+".mp3");a.preload="auto";
+  try{a.playbackRate=rate;a.preservesPitch=true;a.webkitPreservesPitch=true}catch(e){}
+  let done=false,stopped=false;const fin=ok=>{if(done)return;done=true;if(TTS.cur===ctl)TTS.cur=null;onEnd&&onEnd(ok)};
+  a.ontimeupdate=()=>{if(a.duration&&onProgress)onProgress(Math.min(1,a.currentTime/a.duration))};
+  a.onended=()=>{onProgress&&onProgress(1);fin(true)};
+  a.onerror=()=>{if(stopped||done)return;done=true;TTS.cur=null;_play(lines,opts)};
+  const ctl={audio:a,stop(){stopped=true;try{a.pause();a.removeAttribute("src");a.load()}catch(e){}}};this.cur=ctl;
+  const pr=a.play();if(pr&&pr.catch)pr.catch(()=>{if(stopped||done)return;done=true;TTS.cur=null;_play(lines,opts)});
+  return ctl};
+ /* voice picker on every listening clip (practice, mock, Q&A) */
+ const pickerHTML=()=>{const cur=AUDIO.preset();const studio=AUDIO.has.size>0;
+  return `<div class="vpick"><label for="vsel">${ic("vol",16)} Voice</label><select id="vsel">${AUDIO.PRESETS.filter(([v])=>studio||v==="device").map(([v,l])=>`<option value="${v}" ${(studio?cur:"device")===v?"selected":""}>${esc(l)}</option>`).join("")}</select>${studio?"":`<span class="note">Studio news voices play on the website version (mamunbracu.github.io).</span>`}</div>`};
+ const addPicker=w=>{const pl=$("#pl",w);if(!pl||$("#vsel",w))return;pl.insertAdjacentHTML("beforeend",pickerHTML());
+  $("#vsel",w).onchange=e=>{store.set("lvoice",e.target.value);TTS.stop();toast(e.target.value==="device"?"Using your device's voice.":"Voice changed. Press play to hear it.")}};
+ const _lc=listeningClip;listeningClip=function(w,item,opts){const r=_lc(w,item,opts);addPicker(w);
+  if(!AUDIO.ready)document.addEventListener("audio-ready",()=>{const s=$("#vsel",w);if(s&&s.isConnected){s.closest(".vpick").remove();addPicker(w)}},{once:true});return r};
+})();
+</script>
+<style>.vpick{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;margin-top:12px;font-weight:600}.vpick select{max-width:100%;min-width:0}.vpick .note{flex-basis:100%;text-align:center;font-weight:400}</style>
 <script>
 /* accordions: only one open at a time within the same group */
 document.addEventListener("toggle",e=>{const d=e.target;if(!(d instanceof HTMLDetailsElement)||!d.open||!d.isConnected)return;const p=d.parentElement;if(!p)return;
