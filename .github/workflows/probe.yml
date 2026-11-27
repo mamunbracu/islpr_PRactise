@@ -1,12 +1,33 @@
-name: gen
+name: tts
 on: push
+permissions:
+  contents: write
 jobs:
   g:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix: {j: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]}
+      matrix: {j: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]}
     steps:
       - uses: actions/checkout@v4
         with: {ref: probe-ai2}
-      - run: python3 gen.py ${{ matrix.j }} 16
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq espeak-ng ffmpeg >/dev/null
+      - run: pip install -q torch --index-url https://download.pytorch.org/whl/cpu && pip install -q "kokoro>=0.9.4" soundfile
+      - run: python3 tts.py ${{ matrix.j }} 20
+      - uses: actions/upload-artifact@v4
+        with: {name: "a${{ matrix.j }}", path: out/}
+  commit:
+    needs: g
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: main}
+      - uses: actions/download-artifact@v4
+        with: {path: dl, merge-multiple: true}
+      - run: |
+          mkdir -p audio && cp dl/*.mp3 audio/
+          python3 -c "import os,json;fs=sorted(f[:-4] for f in os.listdir('audio') if f.endswith('.mp3'));json.dump(fs,open('audio/index.json','w'))"
+          ls audio | wc -l; du -sh audio
+          git config user.name "github-actions"; git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add audio && git commit -m "Neural news-reader audio for all listening clips (4 British voices)" && git push origin main
